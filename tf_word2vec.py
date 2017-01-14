@@ -37,8 +37,6 @@ def read_tweet(filename):
     # print tweets[:10]
     return tweets, tweets_sent
 tweets, tweets_sent = read_tweet('/home/jiangluo/tf_word2vec/word.txt')
-tweets = tweets[:300000]
-tweets_sent = tweets_sent[:300000]
 
 
 def set_words_sentiment(tweets, tweets_sent):
@@ -114,16 +112,16 @@ def generate_batch(batch_size, num_skips, skip_window):
             targets_to_avoid.append(target)
             batch[i * num_skips + j] = buffer[skip_window]
             labels[i * num_skips + j, 0] = buffer[target]
-            labels_sent[i * num_skips + j, 0] = buffer_sent[skip_window]
+            labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
     return batch, labels, labels_sent
-
+'''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 for i in range(8):
     print(batch[i], reverse_dictionary[batch[i]],
           '->', labels[i, 0], reverse_dictionary[labels[i, 0]])
-
+'''
 batch_size = 128
 embedding_size = 128  # Dimension of the embedding vector.
 skip_window = 1       # How many words to consider left and right.
@@ -167,9 +165,10 @@ with graph.as_default():
     sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
     sent_loss = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(sent_logits, sent_labels))
-    loss = 0.5 * loss_w + 0.5 * sent_loss
-    # Construct the SGD optimizer using a learning rate of 0.001.
-    optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
+    alpha = 0
+    loss = (1 - alpha) * loss_w + alpha * sent_loss
+    # Construct the SGD optimizer using a learning rate of 0.1.
+    optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -182,7 +181,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 60001
+num_steps = 330001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -226,7 +225,7 @@ print data_index
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec.txt', 'w')
+    f = open('vec_w.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
