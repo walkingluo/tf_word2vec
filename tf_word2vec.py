@@ -14,7 +14,7 @@ import tensorflow as tf
 
 
 # Read the data into a list of strings.
-'''
+
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words"""
     with zipfile.ZipFile(filename) as f:
@@ -23,9 +23,8 @@ def read_data(filename):
 
 words = read_data('text8.zip')
 print('Data size', len(words))
+
 '''
-
-
 def read_tweet(filename):
     fp = open(filename)
     tweets = []
@@ -57,6 +56,7 @@ def tweets_to_wordlist(tweets):
 
 words = tweets_to_wordlist(tweets)
 print 'Data size: ', len(words)     # 22386665
+'''
 vocabulary_size = 50000
 
 
@@ -95,13 +95,13 @@ def generate_batch(batch_size, num_skips, skip_window):
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
     labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-    labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.float32)
+    # labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.float32)
     span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     buffer_sent = collections.deque(maxlen=span)
     for _ in range(span):
         buffer.append(data[data_index])
-        buffer_sent.append(words_sent[data_index])
+        # buffer_sent.append(words_sent[data_index])
         data_index = (data_index + 1) % len(data)
     for i in range(batch_size // num_skips):
         target = skip_window  # target label at the center of the buffer
@@ -112,10 +112,10 @@ def generate_batch(batch_size, num_skips, skip_window):
             targets_to_avoid.append(target)
             batch[i * num_skips + j] = buffer[skip_window]
             labels[i * num_skips + j, 0] = buffer[target]
-            labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
+            # labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
-    return batch, labels, labels_sent
+    return batch, labels  # , labels_sent
 '''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 for i in range(8):
@@ -139,7 +139,7 @@ with graph.as_default():
     # Input data.
     train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
+    # sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     # Look up embeddings for inputs.
@@ -156,7 +156,7 @@ with graph.as_default():
     loss_w = tf.reduce_mean(
       tf.nn.sampled_softmax_loss(softmax_weights, softmax_biases, embed, train_labels,
                                  num_sampled, vocabulary_size))
-
+    '''
     # weights and biases for sentiment
     sent_w = tf.Variable(
         tf.truncated_normal([1, embedding_size],
@@ -165,8 +165,11 @@ with graph.as_default():
     sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
     sent_loss = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(sent_logits, sent_labels))
+
     alpha = 0
     loss = (1 - alpha) * loss_w + alpha * sent_loss
+    '''
+    loss = loss_w
     # Construct the SGD optimizer using a learning rate of 0.1.
     optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
@@ -181,7 +184,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 330001
+num_steps = 300001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -190,9 +193,14 @@ with tf.Session(graph=graph) as session:
 
     average_loss = 0
     for step in xrange(num_steps):
+        '''
         batch_inputs, batch_labels, batch_sent = generate_batch(
             batch_size, num_skips, skip_window)
         feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent}
+        '''
+        batch_inputs, batch_labels = generate_batch(
+            batch_size, num_skips, skip_window)
+        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
 
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
@@ -225,7 +233,7 @@ print data_index
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_w.txt', 'w')
+    f = open('vec_text8.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
@@ -237,7 +245,7 @@ print 'saving vector'
 save_vec(final_embeddings, reverse_dictionary)
 
 
-def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
+def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):
     assert low_dim_embs.shape[0] >= len(labels), "More labels than embeddings"
     plt.figure(figsize=(18, 18))  # in inches
     for i, label in enumerate(labels):
