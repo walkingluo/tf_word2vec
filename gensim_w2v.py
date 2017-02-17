@@ -26,14 +26,42 @@ def model():
     print model_text8.similarity('good', 'bad')
     '''
     tweets = read_tweet('/home/jiangluo/tf_word2vec/word.txt')
-    print len(tweets)
-    dictionary = Dictionary(tweets)
-    corpus = [dictionary.doc2bow(t) for t in tweets]
 
-    lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=20)
-    lda.save('ldamodel.lda')
-    # lda = LdaMulticore.load('ldamodel.lda')
-    print lda.print_topics(5)
+    dictionary = Dictionary(tweets)
+    # print dictionary.token2id
+    corpus = [dictionary.doc2bow(t) for t in tweets]
+    # print corpus
+
+    # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=2)
+    # lda.save('lda.lda')
+    lda = LdaMulticore.load('ldamodel.lda')
+    '''
+    tw = tweets[0]
+    # tw = [dictionary.doc2bow(t) for t in tw]
+    tw = dictionary.doc2bow(tw)
+    print tw
+    '''
+
+    fp1 = open('word.txt', 'r')
+    fp2 = open('tweets.txt', 'w')
+
+    all_tweets = []
+    for line in fp1.readlines():
+        all_tweets.append(line.rstrip())
+    print 'done1'
+    topic_tweet = []
+    for i in range(len(corpus)):
+        sort_topics = list(sorted(lda[corpus[i]], key=lambda x: x[1]))
+        topic_tweet.append(sort_topics[-1][0])
+        print len(topic_tweet)
+    print 'done2'
+    for i in range(len(all_tweets)):
+        fp2.write('%s %s\n' % (all_tweets[i], topic_tweet[i]))
+    print 'done3'
+    fp1.close()
+    fp2.close()
+    # print a[-1]
+    # print lda.print_topic(a[-1][0])
 
 if __name__ == '__main__':
     model()
