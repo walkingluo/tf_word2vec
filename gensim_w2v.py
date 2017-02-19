@@ -26,14 +26,14 @@ def model():
     print model_text8.similarity('good', 'bad')
     '''
     tweets = read_tweet('/home/jiangluo/tf_word2vec/word.txt')
-
+    print len(tweets)
     dictionary = Dictionary(tweets)
     # print dictionary.token2id
     corpus = [dictionary.doc2bow(t) for t in tweets]
     # print corpus
 
-    # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=2)
-    # lda.save('lda.lda')
+    # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
+    # lda.save('ldamodel.lda')
     lda = LdaMulticore.load('ldamodel.lda')
     '''
     tw = tweets[0]
@@ -60,8 +60,14 @@ def model():
     print 'done3'
     fp1.close()
     fp2.close()
+
     # print a[-1]
     # print lda.print_topic(a[-1][0])
 
+
+def test():
+    print multiprocessing.cpu_count()-1
+
 if __name__ == '__main__':
     model()
+    # test()

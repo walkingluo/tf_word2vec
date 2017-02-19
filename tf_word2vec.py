@@ -14,7 +14,7 @@ import tensorflow as tf
 
 
 # Read the data into a list of strings.
-
+'''
 def read_data(filename):
     """Extract the first file enclosed in a zip file as a list of words"""
     with zipfile.ZipFile(filename) as f:
@@ -23,19 +23,22 @@ def read_data(filename):
 
 words = read_data('text8.zip')
 print('Data size', len(words))
-
 '''
+
+
 def read_tweet(filename):
     fp = open(filename)
     tweets = []
     tweets_sent = []
+    tweets_topic = []
     for line in fp.readlines():
-        tweets.append(line.split()[:-1])
-        tweets_sent.append(int(line.split()[-1]))
+        tweets.append(line.split()[:-2])
+        tweets_sent.append(int(line.split()[-2]))
+        tweets_topic.append(int(line.split()[-1]))
     # print len(tweets)
     # print tweets[:10]
-    return tweets, tweets_sent
-tweets, tweets_sent = read_tweet('/home/jiangluo/tf_word2vec/word.txt')
+    return tweets, tweets_sent, tweets_topic
+tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
 
 
 def set_words_sentiment(tweets, tweets_sent):
@@ -44,6 +47,14 @@ def set_words_sentiment(tweets, tweets_sent):
         words_sent.extend(len(tweets[i]) * [tweets_sent[i]])
     return words_sent
 words_sent = set_words_sentiment(tweets, tweets_sent)
+
+
+def set_words_topic(tweets, tweets_topic):
+    words_topic = []
+    for i in range(len(tweets)):
+        words_topic.extend(len(tweets[i]) * [tweets_topic[i]])
+    return words_topic
+words_topic = set_words_topic(tweets, tweets_topic)
 
 
 def tweets_to_wordlist(tweets):
@@ -56,8 +67,8 @@ def tweets_to_wordlist(tweets):
 
 words = tweets_to_wordlist(tweets)
 print 'Data size: ', len(words)     # 22386665
-'''
-vocabulary_size = 50000
+
+vocabulary_size = 20000
 
 
 def build_dataset(words):
@@ -95,13 +106,16 @@ def generate_batch(batch_size, num_skips, skip_window):
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
     labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-    # labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.float32)
+    labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.float32)
+    labels_topic = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     buffer_sent = collections.deque(maxlen=span)
+    buffer_topic = collections.deque(maxlen=span)
     for _ in range(span):
         buffer.append(data[data_index])
-        # buffer_sent.append(words_sent[data_index])
+        buffer_sent.append(words_sent[data_index])
+        buffer_topic.append(words_topic[data_index])
         data_index = (data_index + 1) % len(data)
     for i in range(batch_size // num_skips):
         target = skip_window  # target label at the center of the buffer
@@ -112,10 +126,11 @@ def generate_batch(batch_size, num_skips, skip_window):
             targets_to_avoid.append(target)
             batch[i * num_skips + j] = buffer[skip_window]
             labels[i * num_skips + j, 0] = buffer[target]
-            # labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
+            labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
+            labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
-    return batch, labels  # , labels_sent
+    return batch, labels, labels_sent, labels_topic
 '''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 for i in range(8):
@@ -139,7 +154,8 @@ with graph.as_default():
     # Input data.
     train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    # sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
+    sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
+    topic_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     # Look up embeddings for inputs.
@@ -154,9 +170,13 @@ with graph.as_default():
     softmax_biases = tf.Variable(tf.zeros([vocabulary_size]))
 
     loss_w = tf.reduce_mean(
-      tf.nn.sampled_softmax_loss(softmax_weights, softmax_biases, embed, train_labels,
-                                 num_sampled, vocabulary_size))
-    '''
+      tf.nn.sampled_softmax_loss(weights=softmax_weights,
+                                 biases=softmax_biases,
+                                 inputs=embed,
+                                 labels=train_labels,
+                                 num_sampled=num_sampled,
+                                 num_classes=vocabulary_size))
+
     # weights and biases for sentiment
     sent_w = tf.Variable(
         tf.truncated_normal([1, embedding_size],
@@ -164,12 +184,22 @@ with graph.as_default():
     sent_b = tf.Variable(tf.zeros([1]))
     sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
     sent_loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(sent_logits, sent_labels))
+        tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=sent_labels))
 
-    alpha = 0
-    loss = (1 - alpha) * loss_w + alpha * sent_loss
-    '''
-    loss = loss_w
+    # weights and biases for topic
+    topic_w = tf.Variable(
+        tf.truncated_normal([10, embedding_size],
+                            stddev=1.0 / math.sqrt(embedding_size)))
+    topic_b = tf.Variable(tf.zeros([10]))
+    topic_logits = tf.matmul(embed, topic_w, transpose_b=True) + topic_b
+    topic_label = tf.one_hot(topic_labels, 10, dtype=tf.int32)
+    topic_loss = tf.reduce_mean(
+        tf.nn.softmax_cross_entropy_with_logits(logits=topic_logits, labels=topic_label))
+
+    alpha = 0.3
+    loss = (1 - alpha) * loss_w + alpha * sent_loss + alpha * topic_loss
+
+    # loss = loss_w
     # Construct the SGD optimizer using a learning rate of 0.1.
     optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
@@ -184,7 +214,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 300001
+num_steps = 100001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -193,15 +223,16 @@ with tf.Session(graph=graph) as session:
 
     average_loss = 0
     for step in xrange(num_steps):
-        '''
-        batch_inputs, batch_labels, batch_sent = generate_batch(
+
+        batch_inputs, batch_labels, batch_sent, batch_topic = generate_batch(
             batch_size, num_skips, skip_window)
-        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent}
+        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent,
+                     topic_labels: batch_topic}
         '''
         batch_inputs, batch_labels = generate_batch(
             batch_size, num_skips, skip_window)
         feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
-
+        '''
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
         _, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
@@ -233,7 +264,7 @@ print data_index
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_text8.txt', 'w')
+    f = open('vec_st.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]

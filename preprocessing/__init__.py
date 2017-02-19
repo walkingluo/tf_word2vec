@@ -9,7 +9,7 @@ def hash_repl(match):
 # Handels
 hndl_regex = re.compile(r"@(\w+)")
 def hndl_repl(match):
-	return '__HNDL'#_'+match.group(1).upper()
+	return '__HNDL_'#'+match.group(1).upper()
 
 # URLs
 url_regex = re.compile(r"(http|https|ftp)://[a-zA-Z0-9\./]+")
