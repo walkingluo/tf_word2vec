@@ -1,16 +1,24 @@
+# coding=utf-8
 import gensim
 import multiprocessing
 from gensim.corpora import Dictionary
 from gensim.models import LdaMulticore
 
 
-def read_tweet(filename):
-    fp = open(filename)
+def read_tweet():
+    fn = open('neg_weibo.txt', 'r')
+    fp = open('pos_weibo.txt', 'r')
     tweets = []
-    tweets_sent = []
-    for line in fp.readlines():
-        tweets.append(line.split()[:-1])
+    # tweets_sent = []
+    for line in fn.readlines():
+        tweets.append(line.decode('utf-8').split()[:-1])
         # tweets_sent.append(int(line.split()[-1]))
+
+    for line in fp.readlines():
+        tweets.append(line.decode('utf-8').split()[:-1])
+
+    fn.close()
+    fp.close()
     # print len(tweets)
     # print tweets[:10]
     return tweets  # , tweets_sent
@@ -25,21 +33,26 @@ def model():
     model_text8 = gensim.models.Word2Vec.load_word2vec_format('/home/jiangluo/tf_word2vec/vec_text8.txt', binary=False)
     print model_text8.similarity('good', 'bad')
     '''
-    tweets = read_tweet('/home/jiangluo/tf_word2vec/word.txt')
+    tweets = read_tweet()
     print len(tweets)
+    # print ' '.join(tweets[1])
+    # print tweets[1]
+
     dictionary = Dictionary(tweets)
     # print dictionary.token2id
     corpus = [dictionary.doc2bow(t) for t in tweets]
     # print corpus
 
     # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
-    # lda.save('ldamodel.lda')
-    lda = LdaMulticore.load('ldamodel.lda')
+    # lda.save('lda_weibo.lda')
+    lda = LdaMulticore.load('lda_weibo.lda')
+    # print lda.print_topics(10, 5)[0][1]
     '''
     tw = tweets[0]
     # tw = [dictionary.doc2bow(t) for t in tw]
     tw = dictionary.doc2bow(tw)
     print tw
+    '''
     '''
 
     fp1 = open('word.txt', 'r')
@@ -60,7 +73,29 @@ def model():
     print 'done3'
     fp1.close()
     fp2.close()
+    '''
 
+    fn = open('neg_weibo.txt', 'r')
+    fp = open('pos_weibo.txt', 'r')
+    fo = open('weibo.txt', 'w')
+    weibo = []
+    for line in fn.readlines():
+        weibo.append(line.rstrip())
+    for line in fp.readlines():
+        weibo.append(line.rstrip())
+    print 'done1'
+    topic = []
+    for i in range(len(corpus)):
+        sort_topics = list(sorted(lda[corpus[i]], key=lambda x: x[1]))
+        topic.append(sort_topics[-1][0])
+        print len(topic)
+    print 'done2'
+    for i in range(len(weibo)):
+        fo.write('%s %s\n' % (weibo[i], topic[i]))
+    print 'done3'
+    fn.close()
+    fp.close()
+    fo.close()
     # print a[-1]
     # print lda.print_topic(a[-1][0])
 

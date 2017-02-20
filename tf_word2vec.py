@@ -1,7 +1,7 @@
 # Tensorflow for word2vec
-
+# coding=utf-8
 from __future__ import division
-# from __future__ import print_function
+from __future__ import print_function
 
 import collections
 import math
@@ -38,7 +38,7 @@ def read_tweet(filename):
     # print len(tweets)
     # print tweets[:10]
     return tweets, tweets_sent, tweets_topic
-tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
+tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/weibo.txt')
 
 
 def set_words_sentiment(tweets, tweets_sent):
@@ -66,7 +66,7 @@ def tweets_to_wordlist(tweets):
     return words
 
 words = tweets_to_wordlist(tweets)
-print 'Data size: ', len(words)     # 22386665
+print('Data size: ', len(words))     # 22386665
 
 vocabulary_size = 20000
 
@@ -130,6 +130,8 @@ def generate_batch(batch_size, num_skips, skip_window):
             labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
+    # Backtrack a little bit to avoid skipping words in the end of a batch
+    data_index = (data_index + len(data) - span) % len(data)
     return batch, labels, labels_sent, labels_topic
 '''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
@@ -214,7 +216,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 100001
+num_steps = 300001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -255,16 +257,16 @@ with tf.Session(graph=graph) as session:
                 log_str = "Nearest to %s:" % valid_word
                 for k in xrange(top_k):
                     close_word = reverse_dictionary[nearest[k]]
-                    log_str = "%s %r," % (log_str, close_word)
+                    log_str = "%s %s," % (log_str, close_word)
                 print(log_str)
 
     final_embeddings = normalized_embeddings.eval()
 
-print data_index
+print(data_index)
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_st.txt', 'w')
+    f = open('vec_weibo.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
@@ -272,7 +274,7 @@ def save_vec(embeddings, reverse_dictionary):
         f.write("%s %s\n" % (word, embed))
     f.close()
 
-print 'saving vector'
+print('saving vector')
 save_vec(final_embeddings, reverse_dictionary)
 
 
@@ -282,7 +284,7 @@ def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):
     for i, label in enumerate(labels):
         x, y = low_dim_embs[i, :]
         plt.scatter(x, y)
-        plt.annotate(label,
+        plt.annotate(u'本文',
                      xy=(x, y),
                      xytext=(5, 2),
                      textcoords='offset points',
@@ -299,6 +301,7 @@ try:
     plot_only = 500
     low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
     labels = [reverse_dictionary[i] for i in xrange(plot_only)]
+    # plt.rcParams['font.family'] = ['monospace']   # 指定默认字体
     plot_with_labels(low_dim_embs, labels)
 
 except ImportError:

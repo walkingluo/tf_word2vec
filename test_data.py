@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import collections
 import numpy as np
@@ -5,7 +6,7 @@ import random
 
 
 def read_tweet(filename):
-    fp = open(filename)
+    fp = open(filename, 'rb')
     tweets = []
     tweets_sent = []
     tweets_topic = []
@@ -100,27 +101,28 @@ def generate_batch_tweet(data, words_sent, words_topic, batch_size, num_skips, s
 
 
 def main():
-    tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
-    tweets = tweets[:300000]
-    tweets_sent = tweets_sent[:300000]
-    tweets_topic = tweets_topic[:300000]
-    print len(tweets)
+    tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/weibo.txt')
+    tweets = tweets[:10000]
+    tweets_sent = tweets_sent[:10000]
+    tweets_topic = tweets_topic[:10000]
+    print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
 
     ts = set_words_sentiment(tweets, tweets_sent)
     tp = set_words_topic(tweets, tweets_topic)
     # print len(ts)
     words = tweets_to_wordlist(tweets)
-    print len(words)
+    print(len(words))
     data, count, dictionary, reverse_dictionary = build_dataset(words)
-    print len(data)     # 22386665
-    # print 'Most common words (+UNK)', count[:10]
-    # print 'Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]]
+    print(len(data))   # 22386665
+    # print('Most common words (+UNK)', count[:10])
+    # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
+    '''
     batch, labels, labels_sent, labels_topic = generate_batch_tweet(data, ts, tp, batch_size=128, num_skips=2, skip_window=1)
     for i in range(8):
         print(batch[i], reverse_dictionary[batch[i]], '->', labels[i, 0], reverse_dictionary[labels[i, 0]],
               labels_sent[i, 0], labels_topic[i, 0])
-
+    '''
     # print data_index
     # print batch
     # print labels.transpose()
