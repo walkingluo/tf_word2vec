@@ -11,13 +11,21 @@ X, y, _dict, reverse_dict = main()
 
 def word_to_id(tweets, dictionary):
     tweets_to_id = []
+    global c
     for tweet in tweets:
         tweet_to_id = []
         for w in tweet:
-            tweet_to_id.append(dictionary[w])
+            try:
+                tweet_to_id.append(dictionary[w])
+            except Exception as e:
+                tweet_to_id.append(dictionary['UNK'])
         tweets_to_id.append(tweet_to_id)
     return tweets_to_id
+
 tweets_to_id = word_to_id(X, _dict)
+
+# n = len(tweets_to_id)
+train_num = 1400000
 print len(tweets_to_id)
 # print tweets_to_id[:2]
 
@@ -37,14 +45,14 @@ embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
 
 max_weibo_length = 140
-X_train = tweets_to_id[:8000]
-y_train = np.array(y[:8000])
+X_train = tweets_to_id[:train_num]
+y_train = np.array(y[:train_num])
 X_train = sequence.pad_sequences(X_train,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_test = tweets_to_id[8000:]
-y_test = np.array(y[8000:])
+X_test = tweets_to_id[train_num:]
+y_test = np.array(y[train_num:])
 X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
@@ -57,7 +65,8 @@ model.add(Embedding(vocabulary_size,
                     embedding_dim,
                     weights=[embeddings],
                     input_length=max_weibo_length,
-                    trainable=False))
+                    trainable=False,
+                    dropout=0.2))
 
 model.add(Convolution1D(64, 3, border_mode='same'))
 model.add(Convolution1D(32, 3, border_mode='same'))
@@ -71,7 +80,7 @@ model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-model.fit(X_train, y_train, nb_epoch=10, batch_size=32)
+model.fit(X_train, y_train, nb_epoch=1, batch_size=128)
 
 score = model.evaluate(X_test, y_test)
 print model.metrics_names
