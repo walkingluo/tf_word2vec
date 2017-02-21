@@ -1,4 +1,4 @@
-from __future__ import print_function
+# from __future__ import print_function
 import os
 import collections
 import numpy as np
@@ -101,20 +101,20 @@ def generate_batch_tweet(data, words_sent, words_topic, batch_size, num_skips, s
 
 
 def main():
-    tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/weibo.txt')
+    tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
     tweets = tweets[:10000]
     tweets_sent = tweets_sent[:10000]
     tweets_topic = tweets_topic[:10000]
-    print(len(tweets))
+    # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
 
     ts = set_words_sentiment(tweets, tweets_sent)
     tp = set_words_topic(tweets, tweets_topic)
     # print len(ts)
     words = tweets_to_wordlist(tweets)
-    print(len(words))
+    # print(len(words))
     data, count, dictionary, reverse_dictionary = build_dataset(words)
-    print(len(data))   # 22386665
+    # print(len(data))   # 22386665
     # print('Most common words (+UNK)', count[:10])
     # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
     '''
@@ -126,6 +126,7 @@ def main():
     # print data_index
     # print batch
     # print labels.transpose()
+    return tweets, tweets_sent, dictionary, reverse_dictionary
 
 
 if __name__ == "__main__":

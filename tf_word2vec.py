@@ -216,7 +216,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 300001
+num_steps = 1001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -275,7 +275,7 @@ def save_vec(embeddings, reverse_dictionary):
     f.close()
 
 print('saving vector')
-save_vec(final_embeddings, reverse_dictionary)
+# save_vec(final_embeddings, reverse_dictionary)
 
 
 def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):
@@ -284,7 +284,7 @@ def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):
     for i, label in enumerate(labels):
         x, y = low_dim_embs[i, :]
         plt.scatter(x, y)
-        plt.annotate(u'本文',
+        plt.annotate(label.decode('utf-8'),
                      xy=(x, y),
                      xytext=(5, 2),
                      textcoords='offset points',
