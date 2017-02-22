@@ -1,5 +1,5 @@
 from keras.preprocessing import sequence
-from keras.layers import Convolution1D, Flatten, Dropout, Dense
+from keras.layers import Convolution1D, Flatten, Dropout, Dense, LSTM
 from keras.layers.embeddings import Embedding
 from keras.models import Sequential
 import numpy as np
@@ -64,23 +64,20 @@ model = Sequential()
 model.add(Embedding(vocabulary_size,
                     embedding_dim,
                     weights=[embeddings],
-                    input_length=max_weibo_length,
                     trainable=False,
+                    input_length=max_weibo_length,
                     dropout=0.2))
-
 model.add(Convolution1D(64, 3, border_mode='same'))
 model.add(Convolution1D(32, 3, border_mode='same'))
 model.add(Convolution1D(16, 3, border_mode='same'))
 model.add(Flatten())
-
 model.add(Dropout(0.2))
 model.add(Dense(180, activation='sigmoid'))
-
 model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-model.fit(X_train, y_train, nb_epoch=1, batch_size=128)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), nb_epoch=1, batch_size=128)
 
 score = model.evaluate(X_test, y_test)
 print model.metrics_names

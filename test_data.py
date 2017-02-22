@@ -41,6 +41,49 @@ def tweets_to_wordlist(tweets):
     # print words[:10]
     return words
 
+
+def read_lexicon():
+    fn = open('./opinion-lexicon-English/negative-words.txt', 'r')
+    fp = open('./opinion-lexicon-English/positive-words.txt', 'r')
+    neg_words = []
+    pos_words = []
+    for w in fn.readlines()[35:]:
+        neg_words.append(w.strip())
+    for w in fp.readlines()[35:]:
+        pos_words.append(w.strip())
+    fn.close()
+    fp.close()
+    print len(neg_words)
+    print len(pos_words)
+    # print pos_words
+    return neg_words, pos_words
+
+
+def set_words_sentment_in_lexicon(words, neg_words, pos_words):
+    # 0 for neg
+    # 1 for neu
+    # 2 for pos
+    f = open('words_sent_lexicon.txt', 'w')
+    count = 0
+    for w in words:
+        if w in neg_words:
+            f.write('%d\n' % 0)
+        elif w in pos_words:
+            f.write('%d\n' % 2)
+        else:
+            f.write('%d\n' % 1)
+        count += 1
+        print count
+    f.close()
+
+
+def get_word_lexicon():
+    f = open('words_sent_lexicon.txt', 'r')
+    words_sent_lexicon = []
+    for s in f.readlines():
+        words_sent_lexicon.append(int(s.strip()))
+    return words_sent_lexicon
+
 vocabulary_size = 50000
 
 
@@ -105,11 +148,16 @@ def main():
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
 
-    ts = set_words_sentiment(tweets, tweets_sent)
-    tp = set_words_topic(tweets, tweets_topic)
+    # ts = set_words_sentiment(tweets, tweets_sent)
+    # tp = set_words_topic(tweets, tweets_topic)
     # print len(ts)
     words = tweets_to_wordlist(tweets)
     # print(len(words))
+    # neg_words, pos_words = read_lexicon()
+    # set_words_sentment_in_lexicon(words, neg_words, pos_words)
+    # words_sent_lexicon = get_word_lexicon()
+    # print len(words_sent_lexicon)
+    # print words_sent_lexicon[:10]
     data, count, dictionary, reverse_dictionary = build_dataset(words)
     # print len(dictionary)
     # print(len(data))   # 22386665
