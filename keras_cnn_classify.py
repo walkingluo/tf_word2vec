@@ -4,6 +4,7 @@ from keras.layers.embeddings import Embedding
 from keras.models import Sequential
 import numpy as np
 from test_data import main
+import matplotlib.pyplot as plt
 
 X, y, _dict, reverse_dict = main()
 # print len(X), len(y), len(_dict), len(reverse_dict)
@@ -25,7 +26,8 @@ def word_to_id(tweets, dictionary):
 tweets_to_id = word_to_id(X, _dict)
 
 # n = len(tweets_to_id)
-train_num = 1400000
+train_num = 1000000
+vaild_num = 1300000
 print len(tweets_to_id)
 # print tweets_to_id[:2]
 
@@ -39,7 +41,7 @@ def read_vec(filename):
         # embeddings.append(line.split()[1:])
     f.close()
     return vocabulary_size, embedding_dim, embeddings
-vocabulary_size, embedding_dim, embeddings = read_vec('vec_st.txt')
+vocabulary_size, embedding_dim, embeddings = read_vec('vec_4.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -51,8 +53,14 @@ X_train = sequence.pad_sequences(X_train,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_test = tweets_to_id[train_num:]
-y_test = np.array(y[train_num:])
+X_valid = tweets_to_id[train_num:vaild_num]
+y_vaild = np.array(y[train_num:vaild_num])
+X_valid = sequence.pad_sequences(X_valid,
+                                 maxlen=max_weibo_length,
+                                 padding='post',
+                                 truncating='post')
+X_test = tweets_to_id[vaild_num:]
+y_test = np.array(y[vaild_num:])
 X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
@@ -77,10 +85,19 @@ model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-model.fit(X_train, y_train, validation_data=(X_test, y_test), nb_epoch=1, batch_size=128)
+history = model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=10, batch_size=128)
 
 score = model.evaluate(X_test, y_test)
 print model.metrics_names
 print score
 print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
+
+print history.history.keys()
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()

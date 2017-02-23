@@ -145,6 +145,8 @@ def generate_batch_tweet(data, words_sent, words_topic, batch_size, num_skips, s
 
 def main():
     tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
+    # tweets = tweets[:10000]
+    # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
 
