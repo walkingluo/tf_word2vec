@@ -5,7 +5,7 @@ from keras.models import Sequential
 import numpy as np
 from test_data import main
 import matplotlib.pyplot as plt
-
+'''
 embeddings_index = {}
 f = open('./glove.6B/glove.6B.100d.txt', 'r')
 for line in f:
@@ -16,7 +16,7 @@ for line in f:
 f.close()
 
 print('Found %s word vectors.' % len(embeddings_index))
-
+'''
 X, y, _dict, reverse_dict = main()
 # print len(X), len(y), len(_dict), len(reverse_dict)
 
@@ -54,13 +54,14 @@ def read_vec(filename):
         # embeddings.append(line.split()[1:])
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_4.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_w.txt')
 print len(words), type(words[0])
 print words[:5]
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
 count = 0
+'''
 for i in range(vocabulary_size):
     try:
         embeddings[i] = embeddings_index[words[i]]
@@ -68,6 +69,7 @@ for i in range(vocabulary_size):
         embeddings[i] = np.zeros(embedding_dim)
         count += 1
         continue
+'''
 print count
 
 max_weibo_length = 140
@@ -109,7 +111,7 @@ model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-history = model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=1, batch_size=128)
+history = model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=3, batch_size=128)
 
 score = model.evaluate(X_test, y_test)
 print model.metrics_names

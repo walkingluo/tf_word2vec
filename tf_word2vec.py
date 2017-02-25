@@ -77,7 +77,7 @@ def tweets_to_wordlist(tweets):
 words = tweets_to_wordlist(tweets)
 print('Data size: ', len(words))     # 22386665
 
-vocabulary_size = 20000
+vocabulary_size = 30000
 
 
 def build_dataset(words):
@@ -154,8 +154,8 @@ for i in range(8):
 '''
 batch_size = 128
 embedding_size = 100  # Dimension of the embedding vector.
-skip_window = 1       # How many words to consider left and right.
-num_skips = 2         # How many times to reuse an input to generate a label.
+skip_window = 5       # How many words to consider left and right.
+num_skips = 8         # How many times to reuse an input to generate a label.
 
 valid_size = 16     # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
@@ -240,7 +240,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 370001
+num_steps = 1600001
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
