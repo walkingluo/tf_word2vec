@@ -1,7 +1,8 @@
 from keras.preprocessing import sequence
-from keras.layers import Convolution1D, Flatten, Dropout, Dense, LSTM
+from keras.layers import Convolution1D, Flatten, Dropout, Dense, LSTM, MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.models import Sequential
+from keras.callbacks import Callback, EarlyStopping
 import numpy as np
 from test_data import main
 import matplotlib.pyplot as plt
@@ -37,8 +38,8 @@ def word_to_id(tweets, dictionary):
 tweets_to_id = word_to_id(X, _dict)
 
 # n = len(tweets_to_id)
-train_num = 1000000
-vaild_num = 1300000
+train_num = 8000
+vaild_num = 9000
 print len(tweets_to_id)
 # print tweets_to_id[:2]
 
@@ -54,7 +55,7 @@ def read_vec(filename):
         # embeddings.append(line.split()[1:])
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_w.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_s_t_l.txt')
 print len(words), type(words[0])
 print words[:5]
 vocabulary_size = int(vocabulary_size)
@@ -94,6 +95,14 @@ X_test = sequence.pad_sequences(X_test,
 # print len(X_train)
 # print len(X_test)
 
+
+class LossHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
+
 model = Sequential()
 model.add(Embedding(vocabulary_size,
                     embedding_dim,
@@ -101,23 +110,29 @@ model.add(Embedding(vocabulary_size,
                     trainable=False,
                     input_length=max_weibo_length,
                     dropout=0.2))
-model.add(Convolution1D(64, 3, border_mode='same'))
-model.add(Convolution1D(32, 3, border_mode='same'))
-model.add(Convolution1D(16, 3, border_mode='same'))
+model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
+model.add(MaxPooling1D(5))
+model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
+model.add(MaxPooling1D(5))
+model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
+model.add(MaxPooling1D(5))
 model.add(Flatten())
 model.add(Dropout(0.2))
-model.add(Dense(180, activation='sigmoid'))
+model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-history = model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=3, batch_size=128)
+model.compile(loss='binary_crossentropy', optimizer='adam',
+              metrics=['accuracy', 'precision', 'recall', 'fbeta_score'])
+history = LossHistory()
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=2,
+          batch_size=128, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
 print model.metrics_names
 print score
 print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
+print len(history.losses)
 
 '''
 print history.history.keys()

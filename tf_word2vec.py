@@ -77,7 +77,7 @@ def tweets_to_wordlist(tweets):
 words = tweets_to_wordlist(tweets)
 print('Data size: ', len(words))     # 22386665
 
-vocabulary_size = 30000
+vocabulary_size = 50000
 
 
 def build_dataset(words):
@@ -227,7 +227,9 @@ with graph.as_default():
 
     # loss = loss_w
     # Construct the SGD optimizer using a learning rate of 0.1.
-    optimizer = tf.train.GradientDescentOptimizer(0.02).minimize(loss)
+    learning_rate = 0.2
+    lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
+    optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -290,7 +292,7 @@ print(data_index)
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_4.txt', 'w')
+    f = open('vec_s_t_l.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
