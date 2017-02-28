@@ -20,13 +20,20 @@ emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', 
                u'[玫瑰]', u'[威武]', u'[得意地笑]', u'[奥特曼]', u'[太阳]', u'[围观]', u'[哆啦A梦微笑]',
                u'[飞个吻]', u'[抱抱]', u'[蛋糕]', u'[兔子]', u'[喵喵]', u'[笑哈哈]', u'[花心]', u'[偷笑]',
                u'[偷乐]', u'[推荐]', u'[音乐]', u'[羊年大吉]', u'[噢耶]', u'[微风]', u'[月亮]', u'[话筒]',
-               u'[好喜欢]', u'[好棒]', u'[羞嗒嗒]', u'[给力]', u'[江南style]', u'[鲜花]', u'[好爱哦]']
+               u'[好喜欢]', u'[好棒]', u'[羞嗒嗒]', u'[给力]', u'[江南style]', u'[鲜花]', u'[好爱哦]',
+               u'[好得意]', u'[熊猫]', u'[爱心传递]', u'[哇哈哈]', u'[握手]', u'[做鬼脸]', u'[萌]',
+               u'[礼花]', u'[挤眼]', u'[帅]', u'[狂笑]', u'[冒个泡]']
 emotoin_neg = [u'[生病]', u'[失望]', u'[黑线]', u'[吐]', u'[委屈]', u'[悲伤', u'[衰]', u'[愤怒]',
                u'[感冒]', u'[最差]', u'[NO]', u'[怒骂]', u'[困]', u'[哈欠]', u'[打脸]', u'[笑cry]',
                u'[汗]', u'[泪]', u'[晕]', u'[抓狂]', u'[怒]', u'[doge]', u'[蜡烛]', u'[弱]', u'[睡觉]',
                u'[崩溃]', u'[拜拜]', u'[打哈气]', u'[泪流满面]', u'[哼]', u'[草泥马]', u'[挖鼻]', u'[鄙视]',
                u'[阴险]', u'[可怜]', u'[最右]', u'[挖鼻屎]', u'[悲伤]', u'[疑问]', u'[思考]', u'[浮云]',
-               u'[伤心]', u'[囧]', u'[呵呵]', u'[吃惊]', u'[抠鼻屎]']
+               u'[伤心]', u'[囧]', u'[呵呵]', u'[吃惊]', u'[抠鼻屎]', u'[bobo抓狂]', u'[闭嘴]', u'[懒得理你]',
+               u'[嘘]']
+emotoin_neu = [u'[a]', u'[b]', u'[c]', u'[d]', u'[e]', u'[f]', u'[g]',
+               u'[h]', u'[i]', u'[j]', u'[k]', u'[l]', u'[m]', u'[n]',
+               u'[o]', u'[p]', u'[q]', u'[r]', u'[s]', u'[t]',
+               u'[u]', u'[v]', u'[w]', u'[x]', u'[y]', u'[z]']
 
 
 def read_file():
@@ -78,7 +85,7 @@ def read_file():
         sim_weibo = HanziConv.toSimplified(positive_weibo[i].decode('gbk'))
         pos_weibo = preprocess_weibo(sim_weibo)
         seg_list = jieba.lcut(pos_weibo)
-        seg_list = [w for w in seg_list if w not in fuhao and w not in punc and w not in string.punctuation]
+        seg_list = [w for w in seg_list if w not in fuhao and w not in punc]
         each_weibo = ' '.join(seg_list)
         fs_pos.write('%s %d\n' % (each_weibo.encode('utf-8'), 1))
         print j
@@ -131,59 +138,77 @@ def preprocess_weibo(text):
 
 
 def find_emotion():
-    f = open('./data/weibo_train_data.txt', 'r')
+    # f = open('./data/weibo_train_data.txt', 'r')
+    f = open('./2012_weibo/week1.csv', 'r')
     weibo = []
-    for line in f.readlines():
-        weibo.append(line.strip().split('\t')[6].decode('utf-8'))
+    f.readline()
+    for line in f.readlines()[:10]:
+        try:
+            line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            weibo.append(line)
+            print len(weibo)
+        except Exception as e:
+            continue
+    f.close()
     print len(weibo)
-    weibo = np.array(weibo)
+
     emotion = []
     for w in weibo:
         emotion.append(re.findall("(\[.*?\])", w))
-    # print len(emotion)
-    # print emotion[35]
+    print len(emotion)
+    # print emotion[:10]
+
     idx = []
     for i, w in enumerate(emotion):
         if w != []:
             idx.append(i)
     print len(idx)
-    # print idx
-    emotion = np.array(emotion)
-    emotion = emotion[idx]
-    print len(emotion)
+    emotion_clean = []
+    for i in idx:
+        emotion_clean.append(emotion[i])
+    print len(emotion_clean)
+    # print emotion_clean[:10]
+
     emotion_dict = dict()
-    for em in emotion:
+    for em in emotion_clean:
         for ee in em:
             try:
                 emotion_dict[ee] += 1
             except Exception, e:
                 emotion_dict[ee] = 1
     print len(emotion_dict)
+    '''
     del emotion_dict[u'[iso]']
     del emotion_dict[u'[转载]']
     del emotion_dict[u'[PDF]']
     del emotion_dict[u'[图]']
     del emotion_dict[u'[视频]']
+    '''
+    reg = re.compile(u'^\[[0-9]+\]$')
     for k, v in emotion_dict.items():
         if k not in emotoin_pos and k not in emotoin_neg:
             if emotion_dict[k] <= 500:
                 del emotion_dict[k]
+    for k, v in emotion_dict.items():
+        if re.sub(reg, u'', k) == u'' or k in emotoin_neu:
+            del emotion_dict[k]
+
     print len(emotion_dict)
-    '''
-    for k in emotion_dict.keys():
-            print k, emotion_dict[k]
-    '''
+
     print 'pos: ', len(emotoin_pos)
     print 'neg: ', len(emotoin_neg)
-    '''
+
     newA = Counter(emotion_dict)
-    for k, v in newA.most_common(len(emotion_dict)):
+    for k, v in newA.most_common(100):
         print k, v
-    '''
-    weibo = weibo[idx]
-    print len(weibo)
+
+    weibo_em = []
+    for i in idx:
+        weibo_em.append(weibo[i])
+    print len(weibo_em)
+
     sent = []
-    for e in emotion:
+    for e in emotion_clean:
         neg_num = 0
         pos_num = 0
         for i in e:
@@ -198,8 +223,18 @@ def find_emotion():
         else:
             sent.append(1)
     print len(sent)
-    print idx[:10]
-    print sent[:10]
+    print weibo[:10]
+
+    fw = open('./weibo_emotion/week1.txt', 'w')
+    for i in range(len(sent)):
+        weibo_r = weibo_em[i]
+        print weibo_r
+        fw.write('%s\n' % weibo_r.encode('utf-8'))
+        seg_list = jieba.lcut(weibo_r)
+        seg_list = [w for w in seg_list if w not in punc and w not in fuhao and w not in string.punctuation]
+        weibo = ' '.join(seg_list)
+        fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
+    fw.close()
 
 if __name__ == '__main__':
     # read_file()
