@@ -223,13 +223,11 @@ def find_emotion():
         else:
             sent.append(1)
     print len(sent)
-    print weibo[:10]
 
     fw = open('./weibo_emotion/week1.txt', 'w')
     for i in range(len(sent)):
-        weibo_r = weibo_em[i]
-        print weibo_r
-        fw.write('%s\n' % weibo_r.encode('utf-8'))
+        weibo_r = preprocess_weibo(weibo_em[i])
+        # fw.write('%s\n' % weibo_r.encode('utf-8'))
         seg_list = jieba.lcut(weibo_r)
         seg_list = [w for w in seg_list if w not in punc and w not in fuhao and w not in string.punctuation]
         weibo = ' '.join(seg_list)
