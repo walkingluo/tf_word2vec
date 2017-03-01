@@ -3,16 +3,14 @@ import os
 import random
 import jieba
 import re
-import string
+# import string
 from hanziconv import HanziConv
 import numpy as np
 from collections import Counter
 
-fuhao = [u' ', u'。', u'，', u'《', u'》', u'（', u'）', u'【', u'】', u'〈', u'〉', u'；',
-         u':', u'：', u'“ ', u'”', u'‘', u'’', u'·', u'—', u'…', u'–', u'．', u'、', u'~',
-         u'`', u'.', u'&', u'+', u'=', u'“', u',', u'[', u']', u'<']
-punc = "｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
+punc = "。｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
 punc = punc.decode("utf-8")
+punc_en = " \"$%&'()*+,-./:;<=>[\]^_`{|}~"
 
 emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[来]', u'[good]', u'[haha]',
                u'[ok]', u'[拳头]', u'[赞]', u'[耶]', u'[微笑]', u'[色]', u'[可爱]', u'[嘻嘻]',
@@ -70,7 +68,7 @@ def read_file():
         sim_weibo = HanziConv.toSimplified(negative_weibo[i].decode('gbk'))
         neg_weibo = preprocess_weibo(sim_weibo)
         seg_list = jieba.lcut(neg_weibo)
-        seg_list = [w for w in seg_list if w not in punc and w not in fuhao and w not in string.punctuation]
+        seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
         each_weibo = ' '.join(seg_list)
         fs_neg.write('%s %d\n' % (each_weibo.encode('utf-8'), 0))
         print i
@@ -99,20 +97,16 @@ def read_file():
 
 
 def preprocess_weibo(text):
-    text0 = (u'据@中警安徽 ，14日傍晚，安徽阜阳有好心人见两个小女孩在街上游荡，随后报警。@颍东公安在线 民警询问女孩，'
-             u'得知女孩的奶奶重男轻女，在女孩父母离婚后，便想赶走两女孩。民警只好联系女孩的母亲，母亲表示今后她会好好照顾孩子，不再让孩子受委屈。')
-    text1 = (u'回覆 :wish u get rich by yourself!!! much meaningful  :i will do what  白大哥 say , '
-             u'24000 buy buy buy  thz 白大哥對說：師兄，小弟今早之跌市警告應驗啦')
-    text2 = (u'@潘石屹@任志强@王石@余英@倪建达@丁祖昱，这是为什么呢？')
-    text3 = (u'...ab cd d e ,, ,, da wq')
-    text4 = (u'没有希望的国家 操！  :汽油涨价。。。自焚不起了 :  :   :   :     :不忍看，中国这什么，助纣为虐，必备纣灭！')
-    # print text4
-    # seg = jieba.lcut(text2)
-    # print '/'.join(seg)
     # ^[\u4E00-\u9FFF]+$ match all chinese
 
-    hashtags_re = re.compile(u'@[\u4E00-\u9FFF]+')
-    text_re = re.sub(hashtags_re, '_@@@_', text)
+    emotion_re = re.compile(u'\[([\u4E00-\u9FFFA-Za-z0-9]+)\]')
+    text_re = re.sub(emotion_re, '', text)
+
+    hashtags_re = re.compile(u'@[\u4E00-\u9FFFA-Za-z0-9]+')
+    text_re = re.sub(hashtags_re, '', text_re)
+
+    riyu_re = re.compile(u'[\u3040-\u31fe]+')
+    text_re = re.sub(riyu_re, '', text_re)
 
     handles_re = re.compile(u'#[\u4E00-\u9FFF]+')
     text_re = re.sub(handles_re, '_###_', text_re)
@@ -125,15 +119,7 @@ def preprocess_weibo(text):
     def rpt_repl(match):
         return match.group(1)
     text_re = re.sub(repeat_re, rpt_repl, text_re)
-    '''
-    seg_list = jieba.lcut(text_re)
-    print seg_list
-    print u':' in fuhao
-    seg_list = [w for w in seg_list if w in fuhao]
 
-    print text_re
-    print seg_list
-    '''
     return text_re
 
 
@@ -142,7 +128,7 @@ def find_emotion():
     f = open('./2012_weibo/week1.csv', 'r')
     weibo = []
     f.readline()
-    for line in f.readlines()[:10]:
+    for line in f.readlines()[:100]:
         try:
             line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
             weibo.append(line)
@@ -177,13 +163,7 @@ def find_emotion():
             except Exception, e:
                 emotion_dict[ee] = 1
     print len(emotion_dict)
-    '''
-    del emotion_dict[u'[iso]']
-    del emotion_dict[u'[转载]']
-    del emotion_dict[u'[PDF]']
-    del emotion_dict[u'[图]']
-    del emotion_dict[u'[视频]']
-    '''
+
     reg = re.compile(u'^\[[0-9]+\]$')
     for k, v in emotion_dict.items():
         if k not in emotoin_pos and k not in emotoin_neg:
@@ -197,11 +177,11 @@ def find_emotion():
 
     print 'pos: ', len(emotoin_pos)
     print 'neg: ', len(emotoin_neg)
-
+    '''
     newA = Counter(emotion_dict)
     for k, v in newA.most_common(100):
         print k, v
-
+    '''
     weibo_em = []
     for i in idx:
         weibo_em.append(weibo[i])
@@ -229,9 +209,10 @@ def find_emotion():
         weibo_r = preprocess_weibo(weibo_em[i])
         # fw.write('%s\n' % weibo_r.encode('utf-8'))
         seg_list = jieba.lcut(weibo_r)
-        seg_list = [w for w in seg_list if w not in punc and w not in fuhao and w not in string.punctuation]
+        seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
         weibo = ' '.join(seg_list)
-        fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
+        if weibo:
+            fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
     fw.close()
 
 if __name__ == '__main__':
