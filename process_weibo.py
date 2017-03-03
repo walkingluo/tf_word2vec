@@ -10,7 +10,7 @@ from collections import Counter
 
 punc = "。｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
 punc = punc.decode("utf-8")
-punc_en = " \"$%&'()*+,-./:;<=>[\]^_`{|}~"
+punc_en = " \"$%&'()*+,-./:;<=>[\]^_`{|}~·"
 
 emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[来]', u'[good]', u'[haha]',
                u'[ok]', u'[拳头]', u'[赞]', u'[耶]', u'[微笑]', u'[色]', u'[可爱]', u'[嘻嘻]',
@@ -105,16 +105,16 @@ def preprocess_weibo(text):
     hashtags_re = re.compile(u'@[\u4E00-\u9FFFA-Za-z0-9]+')
     text_re = re.sub(hashtags_re, '', text_re)
 
-    riyu_re = re.compile(u'[\u3040-\u31fe]+')
+    riyu_re = re.compile(u'[\u3040-\u3210\u2000-\u2e40\uA000-\uFFFF]+')
     text_re = re.sub(riyu_re, '', text_re)
 
     handles_re = re.compile(u'#[\u4E00-\u9FFF]+')
-    text_re = re.sub(handles_re, '_###_', text_re)
+    text_re = re.sub(handles_re, '_###_ ', text_re)
 
     url_re = re.compile(r'(http|https|ftp)://[a-zA-Z0-9\./]+')
     text_re = re.sub(url_re, '_URL_', text_re)
 
-    repeat_re = re.compile(r'(.)\1{2,}', re.IGNORECASE)
+    repeat_re = re.compile(r'(.)\1{1,}', re.IGNORECASE)
 
     def rpt_repl(match):
         return match.group(1)
@@ -128,7 +128,7 @@ def find_emotion():
     f = open('./2012_weibo/week1.csv', 'r')
     weibo = []
     f.readline()
-    for line in f.readlines()[:100]:
+    for line in f.readlines():
         try:
             line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
             weibo.append(line)
@@ -188,6 +188,8 @@ def find_emotion():
     print len(weibo_em)
 
     sent = []
+    weibo_pos = 0
+    weibo_neg = 0
     for e in emotion_clean:
         neg_num = 0
         pos_num = 0
@@ -198,11 +200,15 @@ def find_emotion():
                 neg_num += 1
         if pos_num > neg_num:
             sent.append(2)
+            weibo_pos += 1
         elif pos_num < neg_num:
             sent.append(0)
+            weibo_neg += 1
         else:
             sent.append(1)
     print len(sent)
+    print "weibo_pos: ", weibo_pos
+    print "weibo_neg: ", weibo_neg
 
     jieba.load_userdict('./dict/dict.txt')
     fw = open('./weibo_emotion/week1.txt', 'w')
@@ -212,8 +218,8 @@ def find_emotion():
             # fw.write('%s\n' % weibo_r.encode('utf-8'))
             seg_list = jieba.lcut(weibo_r)
             seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
-            weibo = ' '.join(seg_list)
-            if weibo:
+            if len(seg_list) > 5:
+                weibo = ' '.join(seg_list)
                 fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
     fw.close()
 
