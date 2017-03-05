@@ -108,16 +108,19 @@ def preprocess_weibo(text):
     hashtags_re = re.compile(u'@[\u4E00-\u9FFFA-Za-z0-9]+')
     text_re = re.sub(hashtags_re, '', text_re)
 
-    riyu_re = re.compile(u'[\u3040-\u3210\u2000-\u2e40\uA000-\uFFFF\U00010000-\U0001ffff._]+')
+    riyu_re = re.compile(u'[\u3040-\u3210\u00c0-\u2e40\uA000-\uFFFF\U00010000-\U0001ffff._]+')
     text_re = re.sub(riyu_re, '', text_re)
+
+    huifu_re = re.compile(u'回复|转发')
+    text_re = re.sub(huifu_re, '', text_re)
 
     handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9]+#')
     text_re = re.sub(handles_re, '_HANDLES_ ', text_re)
 
-    url_re = re.compile(r'(http|https|ftp)://[a-zA-Z0-9\./]+')
+    url_re = re.compile(r'[a-zA-z]+://[a-zA-Z0-9\./]+')
     text_re = re.sub(url_re, '_URL_ ', text_re)
 
-    repeat_re = re.compile(r'([!?])\1{1,}', re.IGNORECASE)
+    repeat_re = re.compile(r'([!?a-z])\1{1,}', re.IGNORECASE)
 
     def rpt_repl(match):
         return match.group(1)
@@ -133,6 +136,7 @@ def find_emotion():
     for line in f.readlines():
         try:
             line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            line = line.lower()
             weibo.append(line)
             print len(weibo)
         except Exception as e:
@@ -143,7 +147,7 @@ def find_emotion():
     emotion = []
     for w in weibo:
         emotion.append(re.findall("(\[.*?\])", w))
-    print len(emotion)
+    # print len(emotion)
     # print emotion[:10]
 
     idx = []
@@ -151,12 +155,13 @@ def find_emotion():
         if w != []:
             idx.append(i)
     print len(idx)
+
     emotion_clean = []
     for i in idx:
         emotion_clean.append(emotion[i])
-    print len(emotion_clean)
+    # print len(emotion_clean)
     # print emotion_clean[:10]
-
+    '''
     emotion_dict = dict()
     for em in emotion_clean:
         for ee in em:
@@ -180,7 +185,6 @@ def find_emotion():
     print 'pos: ', len(emotoin_pos)
     print 'neg: ', len(emotoin_neg)
 
-    '''
     newA = Counter(emotion_dict)
     for k, v in newA.most_common(100):
         print k, v
@@ -189,7 +193,7 @@ def find_emotion():
     weibo_em = []
     for i in idx:
         weibo_em.append(weibo[i])
-    print len(weibo_em)
+    # print len(weibo_em)
 
     sent = []
     weibo_pos = 0
