@@ -8,26 +8,29 @@ from hanziconv import HanziConv
 import numpy as np
 from collections import Counter
 
+random.seed(1377)
+
 punc = "。｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
 punc = punc.decode("utf-8")
-punc_en = " \"$%&'()*+,-./:;<=>[\]^_`{|}~·"
+punc_en = " \"$#%&'()*+,-./:;<=>[\]^_`{|}~·...._"
+punc_en = punc_en.decode('utf-8')
 
 emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[来]', u'[good]', u'[haha]',
                u'[ok]', u'[拳头]', u'[赞]', u'[耶]', u'[微笑]', u'[色]', u'[可爱]', u'[嘻嘻]',
                u'[爱你]', u'[心]', u'[鼓掌]', u'[馋嘴]', u'[抱抱_旧]', u'[发红包]', u'[礼物]', u'[害羞]',
-               u'[玫瑰]', u'[威武]', u'[得意地笑]', u'[奥特曼]', u'[太阳]', u'[围观]', u'[哆啦A梦微笑]',
+               u'[玫瑰]', u'[威武]', u'[得意地笑]', u'[太阳]', u'[哆啦A梦微笑]', u'[冒个泡]', u'[狂笑]',
                u'[飞个吻]', u'[抱抱]', u'[蛋糕]', u'[兔子]', u'[喵喵]', u'[笑哈哈]', u'[花心]', u'[偷笑]',
                u'[偷乐]', u'[推荐]', u'[音乐]', u'[羊年大吉]', u'[噢耶]', u'[微风]', u'[月亮]', u'[话筒]',
                u'[好喜欢]', u'[好棒]', u'[羞嗒嗒]', u'[给力]', u'[江南style]', u'[鲜花]', u'[好爱哦]',
                u'[好得意]', u'[熊猫]', u'[爱心传递]', u'[哇哈哈]', u'[握手]', u'[做鬼脸]', u'[萌]',
-               u'[礼花]', u'[挤眼]', u'[帅]', u'[狂笑]', u'[冒个泡]']
+               u'[礼花]', u'[帅]']
 emotoin_neg = [u'[生病]', u'[失望]', u'[黑线]', u'[吐]', u'[委屈]', u'[悲伤', u'[衰]', u'[愤怒]',
                u'[感冒]', u'[最差]', u'[NO]', u'[怒骂]', u'[困]', u'[哈欠]', u'[打脸]', u'[笑cry]',
                u'[汗]', u'[泪]', u'[晕]', u'[抓狂]', u'[怒]', u'[doge]', u'[蜡烛]', u'[弱]', u'[睡觉]',
                u'[崩溃]', u'[拜拜]', u'[打哈气]', u'[泪流满面]', u'[哼]', u'[草泥马]', u'[挖鼻]', u'[鄙视]',
                u'[阴险]', u'[可怜]', u'[最右]', u'[挖鼻屎]', u'[悲伤]', u'[疑问]', u'[思考]', u'[浮云]',
                u'[伤心]', u'[囧]', u'[呵呵]', u'[吃惊]', u'[抠鼻屎]', u'[bobo抓狂]', u'[闭嘴]', u'[懒得理你]',
-               u'[嘘]']
+               u'[嘘]', u'[围观]']
 emotoin_neu = [u'[a]', u'[b]', u'[c]', u'[d]', u'[e]', u'[f]', u'[g]',
                u'[h]', u'[i]', u'[j]', u'[k]', u'[l]', u'[m]', u'[n]',
                u'[o]', u'[p]', u'[q]', u'[r]', u'[s]', u'[t]',
@@ -105,21 +108,20 @@ def preprocess_weibo(text):
     hashtags_re = re.compile(u'@[\u4E00-\u9FFFA-Za-z0-9]+')
     text_re = re.sub(hashtags_re, '', text_re)
 
-    riyu_re = re.compile(u'[\u3040-\u3210\u2000-\u2e40\uA000-\uFFFF]+')
+    riyu_re = re.compile(u'[\u3040-\u3210\u2000-\u2e40\uA000-\uFFFF\U00010000-\U0001ffff._]+')
     text_re = re.sub(riyu_re, '', text_re)
 
-    handles_re = re.compile(u'#[\u4E00-\u9FFF]+')
-    text_re = re.sub(handles_re, '_###_ ', text_re)
+    handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9]+#')
+    text_re = re.sub(handles_re, '_HANDLES_ ', text_re)
 
     url_re = re.compile(r'(http|https|ftp)://[a-zA-Z0-9\./]+')
-    text_re = re.sub(url_re, '_URL_', text_re)
+    text_re = re.sub(url_re, '_URL_ ', text_re)
 
-    repeat_re = re.compile(r'(.)\1{1,}', re.IGNORECASE)
+    repeat_re = re.compile(r'([!?])\1{1,}', re.IGNORECASE)
 
     def rpt_repl(match):
         return match.group(1)
     text_re = re.sub(repeat_re, rpt_repl, text_re)
-
     return text_re
 
 
@@ -137,7 +139,7 @@ def find_emotion():
             continue
     f.close()
     print len(weibo)
-
+    random.shuffle(weibo)
     emotion = []
     for w in weibo:
         emotion.append(re.findall("(\[.*?\])", w))
@@ -177,11 +179,13 @@ def find_emotion():
 
     print 'pos: ', len(emotoin_pos)
     print 'neg: ', len(emotoin_neg)
+
     '''
     newA = Counter(emotion_dict)
     for k, v in newA.most_common(100):
         print k, v
     '''
+
     weibo_em = []
     for i in idx:
         weibo_em.append(weibo[i])
@@ -198,10 +202,10 @@ def find_emotion():
                 pos_num += 1
             if i in emotoin_neg:
                 neg_num += 1
-        if pos_num > neg_num:
+        if pos_num > neg_num + 1:
             sent.append(2)
             weibo_pos += 1
-        elif pos_num < neg_num:
+        elif pos_num + 1 < neg_num:
             sent.append(0)
             weibo_neg += 1
         else:
@@ -214,6 +218,7 @@ def find_emotion():
     fw = open('./weibo_emotion/week1.txt', 'w')
     for i in range(len(sent)):
         if sent[i] != 1:
+            # print weibo_em[i]
             weibo_r = preprocess_weibo(weibo_em[i])
             # fw.write('%s\n' % weibo_r.encode('utf-8'))
             seg_list = jieba.lcut(weibo_r)
