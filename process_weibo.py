@@ -8,7 +8,7 @@ from hanziconv import HanziConv
 import numpy as np
 from collections import Counter
 
-random.seed(1377)
+random.seed(1177)
 
 punc = "。｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
 punc = punc.decode("utf-8")
@@ -218,32 +218,31 @@ def find_emotion():
     print "weibo_pos: ", weibo_pos
     print "weibo_neg: ", weibo_neg
 
-    jieba.load_userdict('./dict/dict.txt')
+    jieba.load_userdict('./dict/dict_.txt')
     fw = open('./weibo_emotion/week1.txt', 'w')
     for i in range(len(sent)):
         if sent[i] != 1:
-            # print weibo_em[i]
             weibo_r = preprocess_weibo(weibo_em[i])
             # fw.write('%s\n' % weibo_r.encode('utf-8'))
             seg_list = jieba.lcut(weibo_r)
             seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
-            if len(seg_list) > 5:
+            if len(seg_list) > 7:
                 weibo = ' '.join(seg_list)
                 fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
     fw.close()
 
 
 def create_custom_dict():
-    f1 = open('./dict/lexicon_raw.txt', 'r')
-    f2 = open('./dict/cyberword.txt', 'r')
-    fd = open('./dict/dict.txt', 'w')
+    f1 = open('./dict/dict1.txt', 'r')
+    f2 = open('./dict/dict.txt', 'r')
+    fd = open('./dict/dict_.txt', 'w')
 
     words = []
     for word in f1.readlines():
         words.append(word.rstrip())
     print len(words)
     for line in f2.readlines():
-        words.append(line.rstrip().split(',')[0])
+        words.append(line.rstrip())
     print len(words)
     f1.close()
     f2.close()
