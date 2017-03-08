@@ -130,7 +130,7 @@ def preprocess_weibo(text):
 
 def find_emotion():
     # f = open('./data/weibo_train_data.txt', 'r')
-    f = open('./2012_weibo/week1.csv', 'r')
+    f = open('./2012_weibo/week10.csv', 'r')
     weibo = []
     f.readline()
     for line in f.readlines():
@@ -219,7 +219,7 @@ def find_emotion():
     print "weibo_neg: ", weibo_neg
 
     jieba.load_userdict('./dict/dict_.txt')
-    fw = open('./weibo_emotion/week1.txt', 'w')
+    fw = open('./weibo_emotion/week10.txt', 'w')
     for i in range(len(sent)):
         if sent[i] != 1:
             weibo_r = preprocess_weibo(weibo_em[i])
@@ -230,6 +230,23 @@ def find_emotion():
                 weibo = ' '.join(seg_list)
                 fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
     fw.close()
+
+
+def select_data():
+    fp = open('./weibo_emotion/weibo_pos.txt', 'w')
+    fn = open('./weibo_emotion/weibo_neg.txt', 'w')
+    dir = "./weibo_emotion/week"
+    for i in range(1, 11):
+        filename = dir + str(i) + '.txt'
+        f = open(filename, 'r')
+        for line in f.readlines():
+            if 2 == int(line.split(',')[1]):
+                fp.write('%s' % line)
+            else:
+                fn.write('%s' % line)
+        f.close()
+    fp.close()
+    fn.close()
 
 
 def create_custom_dict():
@@ -254,5 +271,6 @@ def create_custom_dict():
 if __name__ == '__main__':
     # read_file()
     # preprocess_weibo('')
-    find_emotion()
+    # find_emotion()
     # create_custom_dict()
+    select_data()

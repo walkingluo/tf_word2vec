@@ -19,6 +19,18 @@ def read_tweet(filename):
     return tweets, tweets_sent, tweets_topic
 
 
+def read_weibo():
+    fp = open('./weibo_emotion/weibo_pos.txt', 'rb')
+    fn = open('./weibo_emotion/weibo_neg.txt', 'rb')
+    weibo_pos = []
+    weibo_neg = []
+    for line in fp.readlines():
+        weibo_pos.append(line.split(',')[0].decode('utf-8').split())
+    for line in fn.readlines():
+        weibo_neg.append(line.split(',')[0].decode('utf-8').split())
+    return weibo_pos, weibo_neg
+
+
 def set_words_sentiment(tweets, tweets_sent):
     words_sent = []
     for i in range(len(tweets)):
@@ -110,22 +122,22 @@ data_index = 0
 
 
 # Function to generate a training batch for the skip-gram model.
-def generate_batch_tweet(data, words_sent, words_topic, batch_size, num_skips, skip_window):
+def generate_batch_tweet(data, words_sent, batch_size, num_skips, skip_window):
     global data_index
     assert batch_size % num_skips == 0
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
     labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-    labels_topic = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+    # labels_topic = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     buffer_sent = collections.deque(maxlen=span)
-    buffer_topic = collections.deque(maxlen=span)
+    # buffer_topic = collections.deque(maxlen=span)
     for _ in range(span):
         buffer.append(data[data_index])
         buffer_sent.append(words_sent[data_index])
-        buffer_topic.append(words_topic[data_index])
+        # buffer_topic.append(words_topic[data_index])
         data_index = (data_index + 1) % len(data)
     for i in range(batch_size // num_skips):
         target = skip_window  # target label at the center of the buffer
@@ -137,24 +149,37 @@ def generate_batch_tweet(data, words_sent, words_topic, batch_size, num_skips, s
             batch[i * num_skips + j] = buffer[skip_window]
             labels[i * num_skips + j, 0] = buffer[target]
             labels_sent[i * num_skips + j, 0] = buffer_sent[skip_window]
-            labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
+            # labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
-    return batch, labels, labels_sent, labels_topic
+    return batch, labels, labels_sent  # , labels_topic
 
 
 def main():
-    tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
-    tweets = tweets[:10000]
-    tweets_sent = tweets_sent[:10000]
+    # tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
+    # tweets = tweets[:10000]
+    # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
 
-    # ts = set_words_sentiment(tweets, tweets_sent)
+    weibo_pos, weibo_neg = read_weibo()
+    weibo_pos = random.sample(weibo_pos, len(weibo_neg))
+    print len(weibo_pos), len(weibo_neg)
+    weibo = []
+    weibo.extend(weibo_pos)
+    weibo.extend(weibo_neg)
+    print len(weibo)
+    weibo_sent = len(weibo_pos) * [1]
+    weibo_sent.extend(len(weibo_neg) * [0])
+    print len(weibo_sent)
+    # print weibo_sent[:10], weibo_sent[-10:-1]
+    ts = set_words_sentiment(weibo, weibo_sent)
+    print len(ts)
     # tp = set_words_topic(tweets, tweets_topic)
     # print len(ts)
-    words = tweets_to_wordlist(tweets)
-    # print(len(words))
+    words = tweets_to_wordlist(weibo)
+    print(len(words))
+    # print " ".join(words[:10])
     # neg_words, pos_words = read_lexicon()
     # set_words_sentment_in_lexicon(words, neg_words, pos_words)
     # words_sent_lexicon = get_word_lexicon()
@@ -166,16 +191,17 @@ def main():
     # print('Most common words (+UNK)', count[:10])
     # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
     '''
-    batch, labels, labels_sent, labels_topic = generate_batch_tweet(data, ts, tp, batch_size=128, num_skips=2, skip_window=1)
+    batch, labels, labels_sent = generate_batch_tweet(data, ts, batch_size=128, num_skips=2, skip_window=1)
+    # print " ".join(words[:8])
     for i in range(8):
         print(batch[i], reverse_dictionary[batch[i]], '->', labels[i, 0], reverse_dictionary[labels[i, 0]],
-              labels_sent[i, 0], labels_topic[i, 0])
+              labels_sent[i, 0])
     '''
     # print data_index
     # print batch
     # print labels.transpose()
-    return tweets, tweets_sent, dictionary, reverse_dictionary
-
+    # return tweets, tweets_sent, dictionary, reverse_dictionary
+    return data, ts, reverse_dictionary
 
 if __name__ == "__main__":
     main()
