@@ -12,7 +12,7 @@ random.seed(1177)
 
 punc = "。｡＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
 punc = punc.decode("utf-8")
-punc_en = " \"$#%&'()*+,-./:;<=>[\]^_`{|}~·...._"
+punc_en = " \"$#@%&'()*+,-./:;<=>[\]^_`{|}~·...._"
 punc_en = punc_en.decode('utf-8')
 
 emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[来]', u'[good]', u'[haha]',
@@ -114,7 +114,7 @@ def preprocess_weibo(text):
     huifu_re = re.compile(u'回复|转发')
     text_re = re.sub(huifu_re, '', text_re)
 
-    handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9]+#')
+    handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9 ]+#')
     text_re = re.sub(handles_re, '_HANDLES_ ', text_re)
 
     url_re = re.compile(r'[a-zA-z]+://[a-zA-Z0-9\./]+')
@@ -128,9 +128,9 @@ def preprocess_weibo(text):
     return text_re
 
 
-def find_emotion():
+def find_emotion(infile, outfile):
     # f = open('./data/weibo_train_data.txt', 'r')
-    f = open('./2012_weibo/week10.csv', 'r')
+    f = open(infile, 'r')
     weibo = []
     f.readline()
     for line in f.readlines():
@@ -219,7 +219,7 @@ def find_emotion():
     print "weibo_neg: ", weibo_neg
 
     jieba.load_userdict('./dict/dict_.txt')
-    fw = open('./weibo_emotion/week10.txt', 'w')
+    fw = open(outfile, 'w')
     for i in range(len(sent)):
         if sent[i] != 1:
             weibo_r = preprocess_weibo(weibo_em[i])
@@ -230,6 +230,15 @@ def find_emotion():
                 weibo = ' '.join(seg_list)
                 fw.write('%s,%d\n' % (weibo.encode('utf-8'), sent[i]))
     fw.close()
+
+
+def main():
+    dir_s = './2012_weibo/week%s.csv'
+    dir_t = './weibo_emotion/week%s.txt'
+    for i in range(21, 26):
+        s = dir_s % str(i)
+        t = dir_t % str(i)
+        find_emotion(s, t)
 
 
 def select_data():
@@ -273,4 +282,5 @@ if __name__ == '__main__':
     # preprocess_weibo('')
     # find_emotion()
     # create_custom_dict()
-    select_data()
+    # select_data()
+    main()
