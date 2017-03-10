@@ -241,30 +241,33 @@ def main():
         find_emotion(s, t)
 
 
+def clean_weibo():
+	f = open('./weibo_freshdata.2016-10-01', 'r')
+	fs = open('./weibo1.txt', 'w')
+	weibo = []
+	reg = re.compile(u'[<|\[|h]+[\u4E00-\u9FFF\u2022A-Za-z0-9 .\'#=:_"/%?-]+[>|"]')
+	for i in range(500):
+		line = f.readline()
+		line = line.strip().split('\t')[9].decode('utf-8')
+		line = re.sub(reg, '', line)
+		fs.write('%s\n' % line.encode('utf-8'))
+	f.close()
+	fs.close()
+
+
 def select_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'w')
     fn = open('./weibo_emotion/weibo_neg.txt', 'w')
     dir = "./weibo_emotion/week"
-    num = []
-    nump = 0
-    numn = 0
-    for i in range(1, 21):
+    for i in range(1, 53):
         filename = dir + str(i) + '.txt'
         f = open(filename, 'r')
         for line in f.readlines():
-            num.append(int(line.split(',')[1]))
             if 2 == int(line.split(',')[1]):
                 fp.write('%s' % line)
-                nump += 1
             else:
                 fn.write('%s' % line)
-                numn += 1
         f.close()
-        print len(num)
-        print nump, numn
-        num = []
-        nump = 0
-        numn = 0
     fp.close()
     fn.close()
 
@@ -306,6 +309,7 @@ if __name__ == '__main__':
     # preprocess_weibo('')
     # find_emotion()
     # create_custom_dict()
-    select_data()
+    # select_data()
     # main()
     # get_train_data()
+    clean_weibo()
