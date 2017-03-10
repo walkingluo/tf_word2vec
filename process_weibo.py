@@ -235,7 +235,7 @@ def find_emotion(infile, outfile):
 def main():
     dir_s = './2012_weibo/week%s.csv'
     dir_t = './weibo_emotion/week%s.txt'
-    for i in range(21, 26):
+    for i in range(46, 53):
         s = dir_s % str(i)
         t = dir_t % str(i)
         find_emotion(s, t)
@@ -245,17 +245,41 @@ def select_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'w')
     fn = open('./weibo_emotion/weibo_neg.txt', 'w')
     dir = "./weibo_emotion/week"
-    for i in range(1, 11):
+    num = []
+    nump = 0
+    numn = 0
+    for i in range(1, 21):
         filename = dir + str(i) + '.txt'
         f = open(filename, 'r')
         for line in f.readlines():
+            num.append(int(line.split(',')[1]))
             if 2 == int(line.split(',')[1]):
                 fp.write('%s' % line)
+                nump += 1
             else:
                 fn.write('%s' % line)
+                numn += 1
         f.close()
+        print len(num)
+        print nump, numn
+        num = []
+        nump = 0
+        numn = 0
     fp.close()
     fn.close()
+
+
+def get_train_data():
+    fp = open('./weibo_emotion/weibo_pos.txt', 'r')
+    fn = open('./weibo_emotion/weibo_neg.txt', 'r')
+    weibo_pos = []
+    weibo_neg = []
+    for line in fp.readlines():
+        weibo_pos.append(line)
+    print len(weibo_pos)
+    for line in fn.readlines():
+        weibo_neg.append(line)
+    print len(weibo_neg)
 
 
 def create_custom_dict():
@@ -282,5 +306,6 @@ if __name__ == '__main__':
     # preprocess_weibo('')
     # find_emotion()
     # create_custom_dict()
-    # select_data()
-    main()
+    select_data()
+    # main()
+    # get_train_data()
