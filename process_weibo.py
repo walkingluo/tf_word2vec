@@ -135,7 +135,8 @@ def find_emotion(infile, outfile):
     f.readline()
     for line in f.readlines():
         try:
-            line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            # line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            line = HanziConv.toSimplified(line.strip().decode('utf-8'))
             line = line.lower()
             weibo.append(line)
             print len(weibo)
@@ -233,33 +234,39 @@ def find_emotion(infile, outfile):
 
 
 def main():
-    dir_s = './2012_weibo/week%s.csv'
+    dir_s = './2012_weibo/weibo%s.txt'
     dir_t = './weibo_emotion/week%s.txt'
-    for i in range(46, 53):
+    for i in range(2, 5):
         s = dir_s % str(i)
-        t = dir_t % str(i)
+        t = dir_t % str(i+52)
         find_emotion(s, t)
 
 
 def clean_weibo():
-	f = open('./weibo_freshdata.2016-10-01', 'r')
-	fs = open('./weibo1.txt', 'w')
-	weibo = []
-	reg = re.compile(u'[<|\[|h]+[\u4E00-\u9FFF\u2022A-Za-z0-9 .\'#=:_"/%?-]+[>|"]')
-	for i in range(500):
-		line = f.readline()
-		line = line.strip().split('\t')[9].decode('utf-8')
-		line = re.sub(reg, '', line)
-		fs.write('%s\n' % line.encode('utf-8'))
-	f.close()
-	fs.close()
+    f = open('./2012_weibo/weibo_freshdata.2016-10-01', 'r')
+    dir = './2012_weibo/weibo%s.txt'
+    j = 0
+    weibo = []
+    # reg = re.compile(u'<[\u4E00-\u9FFF\u2022A-Za-z0-9 .\'\-\[\]~《》·#=:_"/%?]+>')
+    reg = re.compile(u'<[^<>]+[>|"]')
+    for i in range(20000000):
+        if i % 5000000 == 0:
+            j += 1
+            d = dir % str(j)
+            fs = open(d, 'w')
+        line = f.readline()
+        line = line.strip().split('\t')[9].decode('utf-8')
+        line = re.sub(reg, '', line)
+        fs.write('%s\n' % line.encode('utf-8'))
+    f.close()
+    fs.close()
 
 
 def select_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'w')
     fn = open('./weibo_emotion/weibo_neg.txt', 'w')
     dir = "./weibo_emotion/week"
-    for i in range(1, 53):
+    for i in range(1, 57):
         filename = dir + str(i) + '.txt'
         f = open(filename, 'r')
         for line in f.readlines():
@@ -311,5 +318,5 @@ if __name__ == '__main__':
     # create_custom_dict()
     # select_data()
     # main()
-    # get_train_data()
-    clean_weibo()
+    get_train_data()
+    # clean_weibo()
