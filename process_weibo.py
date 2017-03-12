@@ -236,14 +236,14 @@ def find_emotion(infile, outfile):
 def main():
     dir_s = './2012_weibo/weibo%s.txt'
     dir_t = './weibo_emotion/week%s.txt'
-    for i in range(2, 5):
+    for i in range(1, 5):
         s = dir_s % str(i)
-        t = dir_t % str(i+52)
+        t = dir_t % str(i+64)
         find_emotion(s, t)
 
 
 def clean_weibo():
-    f = open('./2012_weibo/weibo_freshdata.2016-10-01', 'r')
+    f = open('./2012_weibo/weibo_freshdata.2016-10-04', 'r')
     dir = './2012_weibo/weibo%s.txt'
     j = 0
     weibo = []
@@ -266,7 +266,7 @@ def select_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'w')
     fn = open('./weibo_emotion/weibo_neg.txt', 'w')
     dir = "./weibo_emotion/week"
-    for i in range(1, 57):
+    for i in range(1, 65):
         filename = dir + str(i) + '.txt'
         f = open(filename, 'r')
         for line in f.readlines():
@@ -317,6 +317,6 @@ if __name__ == '__main__':
     # find_emotion()
     # create_custom_dict()
     # select_data()
-    # main()
-    get_train_data()
+    main()
+    # get_train_data()
     # clean_weibo()
