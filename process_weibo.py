@@ -238,12 +238,12 @@ def main():
     dir_t = './weibo_emotion/week%s.txt'
     for i in range(1, 5):
         s = dir_s % str(i)
-        t = dir_t % str(i+64)
+        t = dir_t % str(i+76)
         find_emotion(s, t)
 
 
 def clean_weibo():
-    f = open('./2012_weibo/weibo_freshdata.2016-10-04', 'r')
+    f = open('./2012_weibo/weibo_freshdata.2016-10-07', 'r')
     dir = './2012_weibo/weibo%s.txt'
     j = 0
     weibo = []
@@ -266,15 +266,16 @@ def select_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'w')
     fn = open('./weibo_emotion/weibo_neg.txt', 'w')
     dir = "./weibo_emotion/week"
-    for i in range(1, 65):
+    for i in range(1, 81):
         filename = dir + str(i) + '.txt'
         f = open(filename, 'r')
         for line in f.readlines():
             if 2 == int(line.split(',')[1]):
-                fp.write('%s' % line)
+                fp.write('%s\n' % line.split(',')[0])
             else:
-                fn.write('%s' % line)
+                fn.write('%s\n' % line.split(',')[0])
         f.close()
+        print i
     fp.close()
     fn.close()
 
@@ -282,14 +283,27 @@ def select_data():
 def get_train_data():
     fp = open('./weibo_emotion/weibo_pos.txt', 'r')
     fn = open('./weibo_emotion/weibo_neg.txt', 'r')
+    ftp = open('./weibo_emotion/train_data_pos.txt', 'w')
+    ftn = open('./weibo_emotion/train_data_neg.txt', 'w')
     weibo_pos = []
     weibo_neg = []
+    k = 5000000
     for line in fp.readlines():
         weibo_pos.append(line)
-    print len(weibo_pos)
+    weibo_pos = random.sample(weibo_pos, k)
+    train_data_pos = []
+    for x in weibo_pos:
+        ftp.write('%s' % x)
     for line in fn.readlines():
         weibo_neg.append(line)
-    print len(weibo_neg)
+    weibo_neg = random.sample(weibo_neg, k)
+    train_data_neg = []
+    for x in weibo_neg:
+        ftn.write('%s' % x)
+    fp.close()
+    fn.close()
+    ftp.close()
+    ftn.close()
 
 
 def create_custom_dict():
@@ -317,6 +331,6 @@ if __name__ == '__main__':
     # find_emotion()
     # create_custom_dict()
     # select_data()
-    main()
-    # get_train_data()
+    # main()
+    get_train_data()
     # clean_weibo()

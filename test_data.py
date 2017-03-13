@@ -20,14 +20,16 @@ def read_tweet(filename):
 
 
 def read_weibo():
-    fp = open('./weibo_emotion/weibo_pos.txt', 'rb')
-    fn = open('./weibo_emotion/weibo_neg.txt', 'rb')
+    fp = open('./weibo_emotion/train_data_pos.txt', 'rb')
+    fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines():
-        weibo_pos.append(line.split(',')[0].decode('utf-8').split())
-    for line in fn.readlines():
-        weibo_neg.append(line.split(',')[0].decode('utf-8').split())
+    for line in fp.readlines()[:2500000]:
+        weibo_pos.append(line.decode('utf-8').split())
+    for line in fn.readlines()[:2500000]:
+        weibo_neg.append(line.decode('utf-8').split())
+    fp.close()
+    fn.close()
     return weibo_pos, weibo_neg
 
 
@@ -96,7 +98,7 @@ def get_word_lexicon():
         words_sent_lexicon.append(int(s.strip()))
     return words_sent_lexicon
 
-vocabulary_size = 50000
+vocabulary_size = 100000
 
 
 def build_dataset(words):
@@ -161,17 +163,30 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-
+    num = 2500000
     weibo_pos, weibo_neg = read_weibo()
-    weibo_pos = random.sample(weibo_pos, len(weibo_neg))
+    # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
+    print " ".join(weibo_pos[0])
+    print " ".join(weibo_neg[0])
+
     weibo = []
     weibo.extend(weibo_pos)
     weibo.extend(weibo_neg)
     print len(weibo)
-    weibo_sent = len(weibo_pos) * [1]
-    weibo_sent.extend(len(weibo_neg) * [0])
+    del weibo_pos
+    del weibo_neg
+    index = np.arange(len(weibo))
+    np.random.shuffle(index)
+    weibo = np.array(weibo)
+    weibo = weibo[index]
+
+    weibo_sent = num * [1]
+    weibo_sent.extend(num * [0])
     print len(weibo_sent)
+    weibo_sent = np.array(weibo_sent)
+    weibo_sent = weibo_sent[index]
+
     # print weibo_sent[:10], weibo_sent[-10:-1]
     ts = set_words_sentiment(weibo, weibo_sent)
     print len(ts)
@@ -185,23 +200,26 @@ def main():
     # words_sent_lexicon = get_word_lexicon()
     # print len(words_sent_lexicon)
     # print words_sent_lexicon[:10]
+    del weibo
+    del weibo_sent
     data, count, dictionary, reverse_dictionary = build_dataset(words)
+    del words
     # print len(dictionary)
-    # print(len(data))   # 22386665
-    # print('Most common words (+UNK)', count[:10])
+    print(len(data))   # 22386665
+    print('Most common words (+UNK)', count[:10])
     # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
-    '''
+
     batch, labels, labels_sent = generate_batch_tweet(data, ts, batch_size=128, num_skips=2, skip_window=1)
     # print " ".join(words[:8])
     for i in range(8):
         print(batch[i], reverse_dictionary[batch[i]], '->', labels[i, 0], reverse_dictionary[labels[i, 0]],
               labels_sent[i, 0])
-    '''
+
     # print data_index
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return data, ts, reverse_dictionary
+    # return data, ts, reverse_dictionary
 
 if __name__ == "__main__":
     main()
