@@ -6,16 +6,16 @@ from gensim.models import LdaMulticore
 
 
 def read_tweet():
-    fn = open('neg_weibo.txt', 'r')
-    fp = open('pos_weibo.txt', 'r')
+    fn = open('./weibo_emotion/train_data_neg.txt', 'r')
+    fp = open('./weibo_emotion/train_data_pos.txt', 'r')
     tweets = []
     # tweets_sent = []
-    for line in fn.readlines():
-        tweets.append(line.decode('utf-8').split()[:-1])
+    for line in fn.readlines()[:1000000]:
+        tweets.append(line.strip().decode('utf-8').split())
         # tweets_sent.append(int(line.split()[-1]))
 
-    for line in fp.readlines():
-        tweets.append(line.decode('utf-8').split()[:-1])
+    for line in fp.readlines()[:1000000]:
+        tweets.append(line.strip().decode('utf-8').split())
 
     fn.close()
     fp.close()
@@ -43,9 +43,9 @@ def model():
     corpus = [dictionary.doc2bow(t) for t in tweets]
     # print corpus
 
-    # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
-    # lda.save('lda_weibo.lda')
-    lda = LdaMulticore.load('lda_weibo.lda')
+    lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
+    lda.save('lda_weibo.lda')
+    # lda = LdaMulticore.load('lda_weibo.lda')
     # print lda.print_topics(10, 5)[0][1]
     '''
     tw = tweets[0]
@@ -74,7 +74,7 @@ def model():
     fp1.close()
     fp2.close()
     '''
-
+    '''
     fn = open('neg_weibo.txt', 'r')
     fp = open('pos_weibo.txt', 'r')
     fo = open('weibo.txt', 'w')
@@ -98,6 +98,7 @@ def model():
     fo.close()
     # print a[-1]
     # print lda.print_topic(a[-1][0])
+    '''
 
 
 def test():
