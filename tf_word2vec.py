@@ -105,8 +105,8 @@ del words  # Hint to reduce memory.
 # print('Most common words (+UNK)', count[:5])
 # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 '''
-data, words_sent, reverse_dictionary = main()
-vocabulary_size = 50000
+data, words_sent, vocab_counts, reverse_dictionary = main()
+vocabulary_size = 100000
 data_index = 0
 
 
@@ -162,7 +162,7 @@ num_skips = 8         # How many times to reuse an input to generate a label.
 valid_size = 16     # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
 valid_examples = np.random.choice(valid_window, valid_size, replace=False)
-num_sampled = 64    # Number of negative examples to sample.
+num_sampled = 128    # Number of negative examples to sample.
 
 graph = tf.Graph()
 
@@ -177,16 +177,50 @@ with graph.as_default():
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     # Look up embeddings for inputs.
+    init_width = 0.5 / embedding_size
     embeddings = tf.Variable(
-        tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+        tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
     # Construct the variables for the softmax loss
+    '''
     softmax_weights = tf.Variable(
         tf.truncated_normal([vocabulary_size, embedding_size],
                             stddev=1.0 / math.sqrt(embedding_size)))
-    softmax_biases = tf.Variable(tf.zeros([vocabulary_size]))
+    '''
+    softmax_weights = tf.Variable(
+        tf.zeros([vocabulary_size, embedding_size]))
+    softmax_biases = tf.Variable(
+        tf.zeros([vocabulary_size]))
 
+    lables_matrix = tf.cast(train_labels, tf.int64)
+
+    sampled_ids, _, _ = tf.nn.fixed_unigram_candidate_sampler(
+        true_classes=lables_matrix,
+        num_true=1,
+        num_sampled=num_sampled,
+        unique=True,
+        range_max=vocabulary_size,
+        distortion=0.75,
+        unigrams=vocab_counts)
+    labels = tf.reshape(train_labels, [batch_size])
+    true_w = tf.nn.embedding_lookup(softmax_weights, labels)
+    true_b = tf.nn.embedding_lookup(softmax_biases, labels)
+    true_logits = tf.reduce_sum(tf.multiply(embed, true_w), 1) + true_b
+
+    sampled_w = tf.nn.embedding_lookup(softmax_weights, sampled_ids)
+    sampled_b = tf.nn.embedding_lookup(softmax_biases, sampled_ids)
+    sampled_b_vec = tf.reshape(sampled_b, [num_sampled])
+    sampled_logits = tf.matmul(embed, sampled_w, transpose_b=True) + sampled_b_vec
+
+    true_xent = tf.nn.sigmoid_cross_entropy_with_logits(
+        labels=tf.ones_like(true_logits), logits=true_logits)
+    sampled_xent = tf.nn.sigmoid_cross_entropy_with_logits(
+        labels=tf.zeros_like(sampled_logits), logits=sampled_logits)
+
+    loss_w = (tf.reduce_sum(true_xent) + tf.reduce_sum(sampled_xent)) / batch_size
+
+    '''
     loss_w = tf.reduce_mean(
       tf.nn.sampled_softmax_loss(weights=softmax_weights,
                                  biases=softmax_biases,
@@ -194,7 +228,7 @@ with graph.as_default():
                                  labels=train_labels,
                                  num_sampled=num_sampled,
                                  num_classes=vocabulary_size))
-
+    '''
     # weights and biases for sentiment
     sent_w = tf.Variable(
         tf.truncated_normal([1, embedding_size],
@@ -231,7 +265,8 @@ with graph.as_default():
     # Construct the SGD optimizer using a learning rate of 0.1.
     learning_rate = 0.2
     lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
-    optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
+    # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -244,7 +279,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 1000
+num_steps = 6200000
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.

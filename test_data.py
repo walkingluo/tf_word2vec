@@ -24,9 +24,9 @@ def read_weibo():
     fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:2500000]:
+    for line in fp.readlines()[:2000000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:2500000]:
+    for line in fn.readlines()[:2000000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -163,7 +163,7 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 2500000
+    num = 2000000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
@@ -174,6 +174,7 @@ def main():
     weibo.extend(weibo_pos)
     weibo.extend(weibo_neg)
     print len(weibo)
+    # random.shuffle(weibo)
     del weibo_pos
     del weibo_neg
     index = np.arange(len(weibo))
@@ -191,7 +192,7 @@ def main():
     ts = set_words_sentiment(weibo, weibo_sent)
     print len(ts)
     # tp = set_words_topic(tweets, tweets_topic)
-    # print len(ts)
+    # print len(tp)
     words = tweets_to_wordlist(weibo)
     print(len(words))
     # print " ".join(words[:10])
@@ -203,23 +204,27 @@ def main():
     del weibo
     del weibo_sent
     data, count, dictionary, reverse_dictionary = build_dataset(words)
+    vocab_counts = []
+    for _, n in count:
+        vocab_counts.append(n)
+    print vocab_counts[:10]
     del words
     # print len(dictionary)
     print(len(data))   # 22386665
     print('Most common words (+UNK)', count[:10])
     # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
-
+    '''
     batch, labels, labels_sent = generate_batch_tweet(data, ts, batch_size=128, num_skips=2, skip_window=1)
     # print " ".join(words[:8])
     for i in range(8):
         print(batch[i], reverse_dictionary[batch[i]], '->', labels[i, 0], reverse_dictionary[labels[i, 0]],
               labels_sent[i, 0])
-
+    '''
     # print data_index
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    # return data, ts, reverse_dictionary
+    return data, ts, vocab_counts, reverse_dictionary
 
 if __name__ == "__main__":
     main()
