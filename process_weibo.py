@@ -325,6 +325,38 @@ def create_custom_dict():
         fd.write("%s\n" % word)
     fd.close()
 
+
+def create_chinese_dict():
+    f1 = open('./dict/chinese_words.txt', 'r')
+    f = open('./dict/chinese_useless_words.txt', 'w')
+
+    words = []
+    for w in f1.readlines():
+        words.append(w.strip())
+    words = set(words)
+    for w in words:
+        f.write('%s\n' % w)
+
+    f1.close()
+    f.close()
+
+
+def get_emotion_word():
+    fp = open('./dict/ntusd/ntusd-positive.txt', 'r')
+    fn = open('./dict/ntusd/ntusd-negative.txt', 'r')
+
+    pos = []
+    neg = []
+    for w in fp.readlines():
+        pos.append(w.strip())
+    print len(pos)
+    for w in fn.readlines():
+        neg.append(w.strip())
+    print len(neg)
+
+    fp.close()
+    fn.close()
+
 if __name__ == '__main__':
     # read_file()
     # preprocess_weibo('')
@@ -332,5 +364,7 @@ if __name__ == '__main__':
     # create_custom_dict()
     # select_data()
     # main()
-    get_train_data()
+    # get_train_data()
     # clean_weibo()
+    # create_chinese_dict()
+    get_emotion_word()

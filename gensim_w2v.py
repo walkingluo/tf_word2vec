@@ -10,11 +10,11 @@ def read_tweet():
     fp = open('./weibo_emotion/train_data_pos.txt', 'r')
     tweets = []
     # tweets_sent = []
-    for line in fn.readlines()[:1000000]:
+    for line in fn.readlines()[:700000]:
         tweets.append(line.strip().decode('utf-8').split())
         # tweets_sent.append(int(line.split()[-1]))
 
-    for line in fp.readlines()[:1000000]:
+    for line in fp.readlines()[:700000]:
         tweets.append(line.strip().decode('utf-8').split())
 
     fn.close()

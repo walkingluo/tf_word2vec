@@ -105,7 +105,7 @@ del words  # Hint to reduce memory.
 # print('Most common words (+UNK)', count[:5])
 # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 '''
-data, words_sent, vocab_counts, reverse_dictionary = main()
+data, words_sent, vocab_counts, reverse_dictionary, cn_words, words_pos, words_neg = main()
 vocabulary_size = 100000
 data_index = 0
 
@@ -119,7 +119,7 @@ def generate_batch(batch_size, num_skips, skip_window):
     labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     labels_sent = np.ndarray(shape=(batch_size, 1), dtype=np.float32)
     # labels_topic = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-    # labels_lexicon = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+    labels_lexicon = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
     span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     buffer_sent = collections.deque(maxlen=span)
@@ -142,12 +142,23 @@ def generate_batch(batch_size, num_skips, skip_window):
             labels[i * num_skips + j, 0] = buffer[target]
             labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
             # labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
-            # labels_lexicon[i * num_skips + j, 0] = buffer_lexicon[skip_window]
+            w = reverse_dictionary[buffer[skip_window]]
+            if w in cn_words:
+                temp = 2
+            elif w in words_pos:
+                temp = 4
+            elif w in words_neg:
+                temp = 0
+            elif buffer_sent[skip_window] == 1:
+                temp = 3
+            elif buffer_sent[skip_window] == 0:
+                temp = 1
+            labels_lexicon[i * num_skips + j, 0] = temp
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
     # Backtrack a little bit to avoid skipping words in the end of a batch
     data_index = (data_index + len(data) - span) % len(data)
-    return batch, labels, labels_sent  # , labels_topic, labels_lexicon
+    return batch, labels, labels_sent, labels_lexicon
 '''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 for i in range(8):
@@ -173,7 +184,7 @@ with graph.as_default():
     train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
     # topic_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    # lexicon_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+    lexicon_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     # Look up embeddings for inputs.
@@ -247,19 +258,19 @@ with graph.as_default():
     topic_label = tf.one_hot(topic_labels, 10, dtype=tf.int32)
     topic_loss = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=topic_logits, labels=topic_label))
-
+    '''
     # weights and biases for lexicon
     lexicon_w = tf.Variable(
-        tf.truncated_normal([3, embedding_size],
+        tf.truncated_normal([5, embedding_size],
                             stddev=1.0 / math.sqrt(embedding_size)))
-    lexicon_b = tf.Variable(tf.zeros([3]))
+    lexicon_b = tf.Variable(tf.zeros([5]))
     lexicon_logits = tf.matmul(embed, lexicon_w, transpose_b=True) + lexicon_b
-    lexicon_label = tf.one_hot(lexicon_labels, 3, dtype=tf.int32)
+    lexicon_label = tf.one_hot(lexicon_labels, 5, dtype=tf.int32)
     lexicon_loss = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=lexicon_logits, labels=lexicon_label))
-    '''
-    alpha = 0.5
-    loss = (1 - alpha) * loss_w + alpha * sent_loss  # + alpha * topic_loss + alpha * lexicon_loss
+
+    alpha = 0.3
+    loss = (1 - alpha * 2) * loss_w + alpha * sent_loss + alpha * lexicon_loss
 
     # loss = loss_w
     # Construct the SGD optimizer using a learning rate of 0.1.
@@ -279,7 +290,7 @@ with graph.as_default():
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 6200000
+num_steps = 10000
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
@@ -294,9 +305,10 @@ with tf.Session(graph=graph) as session:
         feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent,
                      topic_labels: batch_topic, lexicon_labels: batch_lexicon}
         '''
-        batch_inputs, batch_labels, batch_sent = generate_batch(
+        batch_inputs, batch_labels, batch_sent, batch_lexicon = generate_batch(
             batch_size, num_skips, skip_window)
-        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent}
+        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent,
+                     lexicon_labels: batch_lexicon}
 
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()

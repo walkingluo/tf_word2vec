@@ -24,9 +24,9 @@ def read_weibo():
     fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:2000000]:
+    for line in fp.readlines()[:3000000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:2000000]:
+    for line in fn.readlines()[:3000000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -163,7 +163,7 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 2000000
+    num = 3000000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
@@ -203,15 +203,49 @@ def main():
     # print words_sent_lexicon[:10]
     del weibo
     del weibo_sent
+    del index
     data, count, dictionary, reverse_dictionary = build_dataset(words)
     vocab_counts = []
     for _, n in count:
         vocab_counts.append(n)
-    print vocab_counts[:10]
+    # print vocab_counts[:10]
     del words
+    del dictionary
+    del count
+    '''
+    words_dict = dict()
+    for w, n in count:
+        words_dict[w] = n
+    '''
+    fdict = open('./dict/chinese_useless_words.txt', 'r')
+    cn_words = []
+    for w in fdict.readlines():
+        cn_words.append(w.strip().decode('utf-8'))
+    print len(cn_words)
+    fdict.close()
+    '''
+    count_num = 0
+    for w in cn_words:
+        try:
+            count_num += words_dict[w]
+        except Exception, e:
+            continue
+    print count_num
+    '''
+    fp = open('./dict/ntusd/ntusd-positive.txt', 'r')
+    fn = open('./dict/ntusd/ntusd-negative.txt', 'r')
+    words_pos = []
+    words_neg = []
+    for w in fp.readlines():
+        words_pos.append(w.strip().decode('utf-8'))
+    for w in fn.readlines():
+        words_neg.append(w.strip().decode('utf-8'))
+    fp.close()
+    fn.close()
+    print len(words_pos), len(words_neg)
     # print len(dictionary)
-    print(len(data))   # 22386665
-    print('Most common words (+UNK)', count[:10])
+    # print(len(data))   # 22386665
+    # print('Most common words (+UNK)', count[:10])
     # print('Sample data', data[:18], [reverse_dictionary[i] for i in data[:18]])
     '''
     batch, labels, labels_sent = generate_batch_tweet(data, ts, batch_size=128, num_skips=2, skip_window=1)
@@ -224,7 +258,7 @@ def main():
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return data, ts, vocab_counts, reverse_dictionary
+    return data, ts, vocab_counts, reverse_dictionary, cn_words, words_pos, words_neg
 
 if __name__ == "__main__":
     main()
