@@ -11,7 +11,7 @@ import zipfile
 
 import numpy as np
 import tensorflow as tf
-
+from tensorflow.contrib.tensorboard.plugins import projector
 from test_data import main
 
 
@@ -187,6 +187,8 @@ with graph.as_default():
     lexicon_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
     valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
+    global_step = tf.Variable(0, dtype=tf.int32, trainable=False)
+
     # Look up embeddings for inputs.
     init_width = 0.5 / embedding_size
     embeddings = tf.Variable(
@@ -277,7 +279,7 @@ with graph.as_default():
     learning_rate = 0.2
     lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
     # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
-    optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -287,6 +289,8 @@ with graph.as_default():
     similarity = tf.matmul(
       valid_embeddings, normalized_embeddings, transpose_b=True)
 
+    tf.summary.scalar("loss", loss)
+    all_summary = tf.summary.merge_all()
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
@@ -295,8 +299,14 @@ num_steps = 10000
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
     init.run()
+    saver = tf.train.Saver()
     print("Initialized")
-
+    '''
+    ckpt = tf.train.get_checkpoint_state('./checkpoints/checkpoint')
+    if ckpt and ckpt.model_checkpoint_path:
+        saver.restore(session, ckpt.model_checkpoint_path)
+    '''
+    writer = tf.summary.FileWriter('./improved_graph/lr' + str(0.2), session.graph)
     average_loss = 0
     for step in xrange(num_steps):
     	'''
@@ -312,18 +322,18 @@ with tf.Session(graph=graph) as session:
 
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
-        _, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
+        _, loss_val, summary = session.run([optimizer, loss, all_summary], feed_dict=feed_dict)
         average_loss += loss_val
-
-        if step % 2000 == 0:
-            if step > 0:
-                average_loss /= 2000
+        writer.add_summary(summary, global_step=step)
+        if (step + 1) % 2000 == 0:
+            average_loss /= 2000
             # The average loss is an estimate of the loss over the last 2000 batches.
-            print("Average loss at step ", step, ": ", average_loss)
+            print("Average loss at step ", step+1, ": ", average_loss)
+            saver.save(session, './checkpoints/skip-gram', step+1)
             average_loss = 0
 
         # Note that this is expensive (~20% slowdown if computed every 500 steps)
-        if step % 10000 == 0:
+        if (step + 1) % 10000 == 0:
             sim = similarity.eval()
             for i in xrange(valid_size):
                 valid_word = reverse_dictionary[valid_examples[i]]

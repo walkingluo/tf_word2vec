@@ -9,3 +9,5 @@
 /2012_weibo/*
 /dict/*
 *.2016*
+/checkpoints/*
+/improved_graph/*

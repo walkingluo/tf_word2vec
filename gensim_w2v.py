@@ -2,7 +2,10 @@
 import gensim
 import multiprocessing
 from gensim.corpora import Dictionary
-from gensim.models import LdaMulticore
+from gensim.models.ldamulticore import LdaMulticore
+from gensim.models.ldamodel import LdaModel
+import logging
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
 def read_tweet():
@@ -10,11 +13,11 @@ def read_tweet():
     fp = open('./weibo_emotion/train_data_pos.txt', 'r')
     tweets = []
     # tweets_sent = []
-    for line in fn.readlines()[:700000]:
+    for line in fn.readlines()[:2000000]:
         tweets.append(line.strip().decode('utf-8').split())
         # tweets_sent.append(int(line.split()[-1]))
 
-    for line in fp.readlines()[:700000]:
+    for line in fp.readlines()[:2000000]:
         tweets.append(line.strip().decode('utf-8').split())
 
     fn.close()
@@ -43,8 +46,9 @@ def model():
     corpus = [dictionary.doc2bow(t) for t in tweets]
     # print corpus
 
-    lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
-    lda.save('lda_weibo.lda')
+    # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
+    lda = LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, update_every=1, chunksize=10000, passes=2)
+    lda.save('lda_weibo_200.lda')
     # lda = LdaMulticore.load('lda_weibo.lda')
     # print lda.print_topics(10, 5)[0][1]
     '''
