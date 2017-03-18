@@ -24,9 +24,9 @@ def read_weibo():
     fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:100000]:
+    for line in fp.readlines()[:3000000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:100000]:
+    for line in fn.readlines()[:3000000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -163,7 +163,7 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 100000
+    num = 3000000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)

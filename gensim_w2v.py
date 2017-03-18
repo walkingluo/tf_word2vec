@@ -45,12 +45,12 @@ def model():
     # print dictionary.token2id
     corpus = [dictionary.doc2bow(t) for t in tweets]
     # print corpus
-
+    del tweets
     # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
-    lda = LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, update_every=1, chunksize=10000, passes=2)
-    lda.save('lda_weibo_200.lda')
-    # lda = LdaMulticore.load('lda_weibo.lda')
-    # print lda.print_topics(10, 5)[0][1]
+    # lda = LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, update_every=1, chunksize=10000, passes=2)
+    # lda.save('lda_weibo_200.lda')
+    lda = LdaModel.load('lda_weibo_200.lda')
+    # print lda.print_topics(20, 5)
     '''
     tw = tweets[0]
     # tw = [dictionary.doc2bow(t) for t in tw]
@@ -78,14 +78,14 @@ def model():
     fp1.close()
     fp2.close()
     '''
-    '''
-    fn = open('neg_weibo.txt', 'r')
-    fp = open('pos_weibo.txt', 'r')
-    fo = open('weibo.txt', 'w')
+
+    fn = open('./weibo_emotion/train_data_neg.txt', 'r')
+    fp = open('./weibo_emotion/train_data_pos.txt', 'r')
+    fo = open('./weibo_emotion/train_weibo_200M.txt', 'w')
     weibo = []
-    for line in fn.readlines():
+    for line in fn.readlines()[:2000000]:
         weibo.append(line.rstrip())
-    for line in fp.readlines():
+    for line in fp.readlines()[:2000000]:
         weibo.append(line.rstrip())
     print 'done1'
     topic = []
@@ -102,7 +102,6 @@ def model():
     fo.close()
     # print a[-1]
     # print lda.print_topic(a[-1][0])
-    '''
 
 
 def test():

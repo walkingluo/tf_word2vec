@@ -179,21 +179,22 @@ graph = tf.Graph()
 
 with graph.as_default():
 
-    # Input data.
-    train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
-    train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
-    # topic_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    lexicon_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
-    valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
-
-    global_step = tf.Variable(0, dtype=tf.int32, trainable=False)
-
-    # Look up embeddings for inputs.
-    init_width = 0.5 / embedding_size
-    embeddings = tf.Variable(
-        tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
-    embed = tf.nn.embedding_lookup(embeddings, train_inputs)
+    with tf.name_scope('input'):
+        # Input data.
+        train_inputs = tf.placeholder(tf.int32, shape=[batch_size])
+        train_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+        sent_labels = tf.placeholder(tf.float32, shape=[batch_size, 1])
+        # topic_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+        lexicon_labels = tf.placeholder(tf.int32, shape=[batch_size, 1])
+        valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
+    with tf.name_scope('global_step'):
+        global_step = tf.Variable(0, dtype=tf.int32, trainable=False)
+    with tf.name_scope('embeddings'):
+        # Look up embeddings for inputs.
+        init_width = 0.5 / embedding_size
+        embeddings = tf.Variable(
+            tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
+        embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
     # Construct the variables for the softmax loss
     '''
@@ -201,37 +202,38 @@ with graph.as_default():
         tf.truncated_normal([vocabulary_size, embedding_size],
                             stddev=1.0 / math.sqrt(embedding_size)))
     '''
-    softmax_weights = tf.Variable(
-        tf.zeros([vocabulary_size, embedding_size]))
-    softmax_biases = tf.Variable(
-        tf.zeros([vocabulary_size]))
+    with tf.name_scope('softmax'):
+        softmax_weights = tf.Variable(
+            tf.zeros([vocabulary_size, embedding_size]))
+        softmax_biases = tf.Variable(
+            tf.zeros([vocabulary_size]))
+    with tf.name_scope('sampled'):
+        lables_matrix = tf.cast(train_labels, tf.int64)
+        sampled_ids, _, _ = tf.nn.fixed_unigram_candidate_sampler(
+            true_classes=lables_matrix,
+            num_true=1,
+            num_sampled=num_sampled,
+            unique=True,
+            range_max=vocabulary_size,
+            distortion=0.75,
+            unigrams=vocab_counts)
+    with tf.name_scope('true_logits'):
+        labels = tf.reshape(train_labels, [batch_size])
+        true_w = tf.nn.embedding_lookup(softmax_weights, labels)
+        true_b = tf.nn.embedding_lookup(softmax_biases, labels)
+        true_logits = tf.reduce_sum(tf.multiply(embed, true_w), 1) + true_b
+    with tf.name_scope('sampled_logits'):
+        sampled_w = tf.nn.embedding_lookup(softmax_weights, sampled_ids)
+        sampled_b = tf.nn.embedding_lookup(softmax_biases, sampled_ids)
+        sampled_b_vec = tf.reshape(sampled_b, [num_sampled])
+        sampled_logits = tf.matmul(embed, sampled_w, transpose_b=True) + sampled_b_vec
+    with tf.name_scope('loss_w'):
+        true_xent = tf.nn.sigmoid_cross_entropy_with_logits(
+            labels=tf.ones_like(true_logits), logits=true_logits)
+        sampled_xent = tf.nn.sigmoid_cross_entropy_with_logits(
+            labels=tf.zeros_like(sampled_logits), logits=sampled_logits)
 
-    lables_matrix = tf.cast(train_labels, tf.int64)
-
-    sampled_ids, _, _ = tf.nn.fixed_unigram_candidate_sampler(
-        true_classes=lables_matrix,
-        num_true=1,
-        num_sampled=num_sampled,
-        unique=True,
-        range_max=vocabulary_size,
-        distortion=0.75,
-        unigrams=vocab_counts)
-    labels = tf.reshape(train_labels, [batch_size])
-    true_w = tf.nn.embedding_lookup(softmax_weights, labels)
-    true_b = tf.nn.embedding_lookup(softmax_biases, labels)
-    true_logits = tf.reduce_sum(tf.multiply(embed, true_w), 1) + true_b
-
-    sampled_w = tf.nn.embedding_lookup(softmax_weights, sampled_ids)
-    sampled_b = tf.nn.embedding_lookup(softmax_biases, sampled_ids)
-    sampled_b_vec = tf.reshape(sampled_b, [num_sampled])
-    sampled_logits = tf.matmul(embed, sampled_w, transpose_b=True) + sampled_b_vec
-
-    true_xent = tf.nn.sigmoid_cross_entropy_with_logits(
-        labels=tf.ones_like(true_logits), logits=true_logits)
-    sampled_xent = tf.nn.sigmoid_cross_entropy_with_logits(
-        labels=tf.zeros_like(sampled_logits), logits=sampled_logits)
-
-    loss_w = (tf.reduce_sum(true_xent) + tf.reduce_sum(sampled_xent)) / batch_size
+        loss_w = (tf.reduce_sum(true_xent) + tf.reduce_sum(sampled_xent)) / batch_size
 
     '''
     loss_w = tf.reduce_mean(
@@ -242,14 +244,15 @@ with graph.as_default():
                                  num_sampled=num_sampled,
                                  num_classes=vocabulary_size))
     '''
-    # weights and biases for sentiment
-    sent_w = tf.Variable(
-        tf.truncated_normal([1, embedding_size],
-                            stddev=1.0 / math.sqrt(embedding_size)))
-    sent_b = tf.Variable(tf.zeros([1]))
-    sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
-    sent_loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=sent_labels))
+    with tf.name_scope('sentiment_loss'):
+        # weights and biases for sentiment
+        sent_w = tf.Variable(
+            tf.truncated_normal([1, embedding_size],
+                                stddev=1.0 / math.sqrt(embedding_size)))
+        sent_b = tf.Variable(tf.zeros([1]))
+        sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
+        sent_loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=sent_labels))
     '''
     # weights and biases for topic
     topic_w = tf.Variable(
@@ -261,25 +264,27 @@ with graph.as_default():
     topic_loss = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=topic_logits, labels=topic_label))
     '''
-    # weights and biases for lexicon
-    lexicon_w = tf.Variable(
-        tf.truncated_normal([5, embedding_size],
-                            stddev=1.0 / math.sqrt(embedding_size)))
-    lexicon_b = tf.Variable(tf.zeros([5]))
-    lexicon_logits = tf.matmul(embed, lexicon_w, transpose_b=True) + lexicon_b
-    lexicon_label = tf.one_hot(lexicon_labels, 5, dtype=tf.int32)
-    lexicon_loss = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(logits=lexicon_logits, labels=lexicon_label))
-
-    alpha = 0.3
-    loss = (1 - alpha * 2) * loss_w + alpha * sent_loss + alpha * lexicon_loss
+    with tf.name_scope('lexicon_loss'):
+        # weights and biases for lexicon
+        lexicon_w = tf.Variable(
+            tf.truncated_normal([5, embedding_size],
+                                stddev=1.0 / math.sqrt(embedding_size)))
+        lexicon_b = tf.Variable(tf.zeros([5]))
+        lexicon_logits = tf.matmul(embed, lexicon_w, transpose_b=True) + lexicon_b
+        lexicon_label = tf.one_hot(lexicon_labels, 5, dtype=tf.int32)
+        lexicon_loss = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(logits=lexicon_logits, labels=lexicon_label))
+    with tf.name_scope('loss'):
+        alpha = 0.3
+        loss = (1 - alpha * 2) * loss_w + alpha * sent_loss + alpha * lexicon_loss
 
     # loss = loss_w
-    # Construct the SGD optimizer using a learning rate of 0.1.
-    learning_rate = 0.2
-    lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
-    # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
-    optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
+    with tf.name_scope('optimizer'):
+        # Construct the SGD optimizer using a learning rate of 0.1.
+        learning_rate = 0.2
+        lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
+        # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -288,24 +293,25 @@ with graph.as_default():
       normalized_embeddings, valid_dataset)
     similarity = tf.matmul(
       valid_embeddings, normalized_embeddings, transpose_b=True)
-
-    tf.summary.scalar("loss", loss)
-    all_summary = tf.summary.merge_all()
+    with tf.name_scope('summary'):
+        tf.summary.scalar("loss", loss)
+        # tf.summary.histogram('loss', loss)
+        all_summary = tf.summary.merge_all()
     # Add variable initializer.
     init = tf.global_variables_initializer()
 
-num_steps = 10000
+num_steps = 9300000
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
     init.run()
     saver = tf.train.Saver()
     print("Initialized")
-    '''
+
     ckpt = tf.train.get_checkpoint_state('./checkpoints/checkpoint')
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(session, ckpt.model_checkpoint_path)
-    '''
+
     writer = tf.summary.FileWriter('./improved_graph/lr' + str(0.2), session.graph)
     average_loss = 0
     for step in xrange(num_steps):
@@ -324,7 +330,7 @@ with tf.Session(graph=graph) as session:
         # in the list of returned values for session.run()
         _, loss_val, summary = session.run([optimizer, loss, all_summary], feed_dict=feed_dict)
         average_loss += loss_val
-        writer.add_summary(summary, global_step=step)
+        writer.add_summary(summary, global_step=step+1)
         if (step + 1) % 2000 == 0:
             average_loss /= 2000
             # The average loss is an estimate of the loss over the last 2000 batches.
@@ -351,7 +357,7 @@ print(data_index)
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_weibo_s.txt', 'w')
+    f = open('vec_weibo_s_l.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
