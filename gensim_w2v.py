@@ -9,8 +9,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 
 def read_tweet():
-    fn = open('./weibo_emotion/train_data_neg.txt', 'r')
-    fp = open('./weibo_emotion/train_data_pos.txt', 'r')
+    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'r')
+    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'r')
     tweets = []
     # tweets_sent = []
     for line in fn.readlines()[:2000000]:
@@ -47,9 +47,9 @@ def model():
     # print corpus
     del tweets
     # lda = LdaMulticore(corpus=corpus, id2word=dictionary, workers=multiprocessing.cpu_count()-1, num_topics=10, passes=1)
-    # lda = LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, update_every=1, chunksize=10000, passes=2)
-    # lda.save('lda_weibo_200.lda')
-    lda = LdaModel.load('lda_weibo_200.lda')
+    lda = LdaModel(corpus=corpus, id2word=dictionary, num_topics=20, update_every=1, chunksize=10000, passes=2)
+    lda.save('lda_weibo_200.lda')
+    # lda = LdaModel.load('lda_weibo_200.lda')
     # print lda.print_topics(20, 5)
     '''
     tw = tweets[0]
@@ -79,8 +79,8 @@ def model():
     fp2.close()
     '''
 
-    fn = open('./weibo_emotion/train_data_neg.txt', 'r')
-    fp = open('./weibo_emotion/train_data_pos.txt', 'r')
+    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'r')
+    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'r')
     fo = open('./weibo_emotion/train_weibo_200M.txt', 'w')
     weibo = []
     for line in fn.readlines()[:2000000]:

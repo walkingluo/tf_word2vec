@@ -233,6 +233,48 @@ def find_emotion(infile, outfile):
     fw.close()
 
 
+def process_weibo_deep():
+    fp = open('./weibo_emotion/train_data_pos.txt', 'r')
+    fn = open('./weibo_emotion/train_data_neg.txt', 'r')
+    fo_p = open('./weibo_emotion/clean_train_data_pos.txt', 'w')
+    fo_n = open('./weibo_emotion/clean_train_data_neg.txt', 'w')
+
+    weibo_pos = []
+    weibo_neg = []
+    jieba.load_userdict('./dict/dict.txt')
+    reg_eng = re.compile(u'[a-zA-Z0-9@#]+')
+
+    for line in fp.readlines():
+        line = ''.join(line.strip().decode('utf-8').split())
+        line = re.sub(reg_eng, '', line)
+        line = jieba.lcut(line)
+        if len(line) > 7:
+            line = ' '.join(line)
+            weibo_pos.append(line)
+            print len(weibo_pos)
+    print len(weibo_pos)
+
+    for line in fn.readlines():
+        line = ''.join(line.strip().decode('utf-8').split())
+        line = re.sub(reg_eng, '', line)
+        line = jieba.lcut(line)
+        if len(line) > 7:
+            line = ' '.join(line)
+            weibo_neg.append(line)
+            print len(weibo_neg)
+    print len(weibo_neg)
+
+    for line in weibo_pos:
+        fo_p.write('%s\n' % line.encode('utf-8'))
+    for line in weibo_neg:
+        fo_n.write('%s\n' % line.encode('utf-8'))
+
+    fp.close()
+    fn.close()
+    fo_p.close()
+    fo_n.close()
+
+
 def main():
     dir_s = './2012_weibo/weibo%s.txt'
     dir_t = './weibo_emotion/week%s.txt'
@@ -307,55 +349,108 @@ def get_train_data():
 
 
 def create_custom_dict():
-    f1 = open('./dict/dict1.txt', 'r')
-    f2 = open('./dict/dict.txt', 'r')
-    fd = open('./dict/dict_.txt', 'w')
+    f1 = open('./dict/SogouR.txt', 'r')
+    f2 = open('./dict/dict_.txt', 'r')
+    f3 = open('./dict/pos_words.txt', 'r')
+    f4 = open('./dict/neg_words.txt', 'r')
+    f5 = open('./dict/neu_words.txt', 'r')
+    fd = open('./dict/dict.txt', 'w')
 
     words = []
-    for word in f1.readlines():
-        words.append(word.rstrip())
+    for line in f1.readlines():
+        words.extend(line.strip().split()[0].decode('utf-8').split('-'))
+        # words.append(line.strip().split()[0].split('-')[0].decode('utf-8'))
+        # words.append(line.strip().split()[0].split('-')[1].decode('utf-8'))
     print len(words)
     for line in f2.readlines():
-        words.append(line.rstrip())
+        words.append(line.strip().decode('utf-8'))
     print len(words)
-    f1.close()
-    f2.close()
+    for line in f3.readlines():
+        words.append(line.strip().decode('utf-8'))
+    print len(words)
+    for line in f4.readlines():
+        words.append(line.strip().decode('utf-8'))
+    print len(words)
+    for line in f5.readlines():
+        words.append(line.strip().decode('utf-8'))
+    print len(words)
+
+    words = set(words)
+    print len(words)
 
     for word in words:
-        fd.write("%s\n" % word)
+        fd.write("%s\n" % word.encode('utf-8'))
+
+    f1.close()
+    f2.close()
+    f3.close()
+    f4.close()
+    f5.close()
     fd.close()
 
 
 def create_chinese_dict():
-    f1 = open('./dict/chinese_words.txt', 'r')
-    f = open('./dict/chinese_useless_words.txt', 'w')
+    f1 = open(u'./dict/主张词语.txt', 'r')
+    f2 = open(u'./dict/程度级别词语.txt', 'r')
+    f = open('./dict/chinese_words.txt', 'r')
+    fo = open('./dict/chinese_useless_words.txt', 'w')
 
     words = []
     for w in f1.readlines():
-        words.append(w.strip())
+        words.append(w.strip().decode('utf-8'))
+    for w in f2.readlines():
+        words.append(w.strip().decode('utf-8'))
+    for w in f.readlines():
+        words.append(w.strip().decode('utf-8'))
     words = set(words)
     for w in words:
-        f.write('%s\n' % w)
-
+        fo.write('%s\n' % w.encode('utf-8'))
     f1.close()
+    f2.close()
     f.close()
 
 
 def get_emotion_word():
-    fp = open('./dict/ntusd/ntusd-positive.txt', 'r')
-    fn = open('./dict/ntusd/ntusd-negative.txt', 'r')
+    fp1 = open('./dict/ntusd/ntusd-positive.txt', 'r')
+    fp2 = open(u'./dict/正面情感词语.txt', 'r')
+    fp3 = open(u'./dict/正面评价词语.txt', 'r')
+    fn1 = open('./dict/ntusd/ntusd-negative.txt', 'r')
+    fn2 = open(u'./dict/负面情感词语.txt', 'r')
+    fn3 = open(u'./dict/负面评价词语.txt', 'r')
+
+    fo_p = open('./dict/pos_words.txt', 'w')
+    fo_n = open('./dict/neg_words.txt', 'w')
 
     pos = []
     neg = []
-    for w in fp.readlines():
+    for w in fp1.readlines():
+        pos.append(w.strip())
+    for w in fp2.readlines():
+        pos.append(w.strip())
+    for w in fp3.readlines():
         pos.append(w.strip())
     print len(pos)
-    for w in fn.readlines():
+    for w in pos:
+        fo_p.write('%s\n' % w)
+
+    for w in fn1.readlines():
+        neg.append(w.strip())
+    for w in fn2.readlines():
+        neg.append(w.strip())
+    for w in fn3.readlines():
         neg.append(w.strip())
     print len(neg)
+    for w in neg:
+        fo_n.write('%s\n' % w)
 
-    fp.close()
-    fn.close()
+    fp1.close()
+    fp2.close()
+    fp3.close()
+    fn1.close()
+    fn2.close()
+    fn3.close()
+    fo_p.close()
+    fo_n.close()
 
 if __name__ == '__main__':
     # read_file()
@@ -367,4 +462,5 @@ if __name__ == '__main__':
     # get_train_data()
     # clean_weibo()
     # create_chinese_dict()
-    get_emotion_word()
+    # get_emotion_word()
+    process_weibo_deep()
