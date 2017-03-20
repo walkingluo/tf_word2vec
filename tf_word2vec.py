@@ -106,6 +106,7 @@ del words  # Hint to reduce memory.
 # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 '''
 data, words_sent, vocab_counts, reverse_dictionary, cn_words, words_pos, words_neg = main()
+print len(data)
 vocabulary_size = 100000
 data_index = 0
 
@@ -195,16 +196,15 @@ with graph.as_default():
         embeddings = tf.Variable(
             tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
         embed = tf.nn.embedding_lookup(embeddings, train_inputs)
-
-    # Construct the variables for the softmax loss
-    '''
-    softmax_weights = tf.Variable(
-        tf.truncated_normal([vocabulary_size, embedding_size],
-                            stddev=1.0 / math.sqrt(embedding_size)))
-    '''
     with tf.name_scope('softmax'):
+        # Construct the variables for the softmax loss
+        softmax_weights = tf.Variable(
+            tf.truncated_normal([vocabulary_size, embedding_size],
+                                stddev=1.0 / math.sqrt(embedding_size)))
+        '''
         softmax_weights = tf.Variable(
             tf.zeros([vocabulary_size, embedding_size]))
+        '''
         softmax_biases = tf.Variable(
             tf.zeros([vocabulary_size]))
     with tf.name_scope('sampled'):
@@ -282,7 +282,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # Construct the SGD optimizer using a learning rate of 0.1.
         learning_rate = 0.2
-        lr = learning_rate * tf.maximum(0.0001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
+        lr = learning_rate * tf.maximum(0.001, 1.0 - tf.cast(data_index, tf.float32) / len(data))
         # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
         optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
