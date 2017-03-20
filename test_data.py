@@ -20,8 +20,8 @@ def read_tweet(filename):
 
 
 def read_weibo():
-    fp = open('./weibo_emotion/train_data_pos.txt', 'rb')
-    fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
+    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'rb')
+    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
     for line in fp.readlines()[:3000000]:
@@ -217,12 +217,12 @@ def main():
     for w, n in count:
         words_dict[w] = n
     '''
-    fdict = open('./dict/chinese_useless_words.txt', 'r')
-    cn_words = []
+    f_neu = open('./dict/neu_words.txt', 'r')
+    neu_words = []
     for w in fdict.readlines():
-        cn_words.append(w.strip().decode('utf-8'))
-    print len(cn_words)
-    fdict.close()
+        neu_words.append(w.strip().decode('utf-8'))
+    print len(neu_words)
+    f_neu.close()
     '''
     count_num = 0
     for w in cn_words:
@@ -232,17 +232,17 @@ def main():
             continue
     print count_num
     '''
-    fp = open('./dict/ntusd/ntusd-positive.txt', 'r')
-    fn = open('./dict/ntusd/ntusd-negative.txt', 'r')
-    words_pos = []
-    words_neg = []
+    fp = open('./dict/pos_words.txt', 'r')
+    fn = open('./dict/neg_words.txt', 'r')
+    pos_words = []
+    neg_words = []
     for w in fp.readlines():
-        words_pos.append(w.strip().decode('utf-8'))
+        pos_words.append(w.strip().decode('utf-8'))
     for w in fn.readlines():
-        words_neg.append(w.strip().decode('utf-8'))
+        neg_words.append(w.strip().decode('utf-8'))
     fp.close()
     fn.close()
-    print len(words_pos), len(words_neg)
+    print len(pos_words), len(neg_words)
     # print len(dictionary)
     # print(len(data))   # 22386665
     # print('Most common words (+UNK)', count[:10])
@@ -258,7 +258,7 @@ def main():
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return data, ts, vocab_counts, reverse_dictionary, cn_words, words_pos, words_neg
+    return data, ts, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
 
 if __name__ == "__main__":
     main()

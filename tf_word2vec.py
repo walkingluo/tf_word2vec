@@ -105,7 +105,7 @@ del words  # Hint to reduce memory.
 # print('Most common words (+UNK)', count[:5])
 # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 '''
-data, words_sent, vocab_counts, reverse_dictionary, cn_words, words_pos, words_neg = main()
+data, words_sent, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words = main()
 print len(data)
 vocabulary_size = 100000
 data_index = 0
@@ -144,11 +144,11 @@ def generate_batch(batch_size, num_skips, skip_window):
             labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
             # labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
             w = reverse_dictionary[buffer[skip_window]]
-            if w in cn_words:
+            if w in neu_words:
                 temp = 2
-            elif w in words_pos:
+            elif w in pos_words:
                 temp = 4
-            elif w in words_neg:
+            elif w in neg_words:
                 temp = 0
             elif buffer_sent[skip_window] == 1:
                 temp = 3
