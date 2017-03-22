@@ -20,13 +20,13 @@ def read_tweet(filename):
 
 
 def read_weibo():
-    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'rb')
-    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'rb')
+    fp = open('./weibo_emotion/train_data_pos.txt', 'rb')
+    fn = open('./weibo_emotion/train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:3000000]:
+    for line in fp.readlines()[:10000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:3000000]:
+    for line in fn.readlines()[:10000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -98,7 +98,7 @@ def get_word_lexicon():
         words_sent_lexicon.append(int(s.strip()))
     return words_sent_lexicon
 
-vocabulary_size = 100000
+vocabulary_size = 10000
 
 
 def build_dataset(words):
@@ -163,7 +163,7 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 3000000
+    num = 10000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
@@ -217,12 +217,14 @@ def main():
     for w, n in count:
         words_dict[w] = n
     '''
+    '''
     f_neu = open('./dict/neu_words.txt', 'r')
     neu_words = []
     for w in fdict.readlines():
         neu_words.append(w.strip().decode('utf-8'))
     print len(neu_words)
     f_neu.close()
+    '''
     '''
     count_num = 0
     for w in cn_words:
@@ -231,6 +233,7 @@ def main():
         except Exception, e:
             continue
     print count_num
+    '''
     '''
     fp = open('./dict/pos_words.txt', 'r')
     fn = open('./dict/neg_words.txt', 'r')
@@ -243,6 +246,7 @@ def main():
     fp.close()
     fn.close()
     print len(pos_words), len(neg_words)
+    '''
     # print len(dictionary)
     # print(len(data))   # 22386665
     # print('Most common words (+UNK)', count[:10])
@@ -258,7 +262,7 @@ def main():
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return data, ts, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
+    return data, ts, vocab_counts, reverse_dictionary#, neu_words, pos_words, neg_words
 
 if __name__ == "__main__":
     main()
