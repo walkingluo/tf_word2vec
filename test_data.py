@@ -219,7 +219,7 @@ def main():
     '''
     f_neu = open('./dict/neu_words.txt', 'r')
     neu_words = []
-    for w in fdict.readlines():
+    for w in f_neu.readlines():
         neu_words.append(w.strip().decode('utf-8'))
     print len(neu_words)
     f_neu.close()
