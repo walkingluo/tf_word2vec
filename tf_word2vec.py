@@ -109,11 +109,13 @@ data, words_sent, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_wo
 print len(data)
 vocabulary_size = 200000
 data_index = 0
+word_dict = dict()
 
 
 # Function to generate a training batch for the skip-gram model.
 def generate_batch(batch_size, num_skips, skip_window):
     global data_index
+    global word_dict
     assert batch_size % num_skips == 0
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
@@ -144,16 +146,20 @@ def generate_batch(batch_size, num_skips, skip_window):
             labels_sent[i * num_skips + j, 0] = float(buffer_sent[skip_window])
             # labels_topic[i * num_skips + j, 0] = buffer_topic[skip_window]
             w = reverse_dictionary[buffer[skip_window]]
-            if w in neu_words:
-                temp = 2
-            elif w in pos_words:
-                temp = 4
-            elif w in neg_words:
-                temp = 0
-            elif buffer_sent[skip_window] == 1:
-                temp = 3
-            elif buffer_sent[skip_window] == 0:
-                temp = 1
+            try:
+                temp = word_dict[w]
+            except Exception as e:
+                if w in neu_words:
+                    temp = 2
+                elif w in pos_words:
+                    temp = 4
+                elif w in neg_words:
+                    temp = 0
+                elif buffer_sent[skip_window] == 1:
+                    temp = 3
+                elif buffer_sent[skip_window] == 0:
+                    temp = 1
+                word_dict[w] = temp
             labels_lexicon[i * num_skips + j, 0] = temp
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
@@ -280,8 +286,8 @@ with graph.as_default():
     # loss = loss_w
     with tf.name_scope('optimizer'):
         # Construct the SGD optimizer using a learning rate of 0.1.
-        learning_rate = 0.2
-        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.95)
+        learning_rate = 0.01
+        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.0005)
         optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step=global_step)
         # optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
