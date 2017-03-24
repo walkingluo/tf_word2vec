@@ -148,7 +148,7 @@ def generate_batch(batch_size, num_skips, skip_window):
             w = reverse_dictionary[buffer[skip_window]]
             try:
                 temp = word_dict[w]
-            except Exception as e:
+            except Exception, e:
                 if w in neu_words:
                     temp = 2
                 elif w in pos_words:
@@ -159,6 +159,9 @@ def generate_batch(batch_size, num_skips, skip_window):
                     temp = 3
                 elif buffer_sent[skip_window] == 0:
                     temp = 1
+                else:
+                    print "error: not find in word dict!"
+                    return
                 word_dict[w] = temp
             labels_lexicon[i * num_skips + j, 0] = temp
         buffer.append(data[data_index])
@@ -281,15 +284,15 @@ with graph.as_default():
 
     with tf.name_scope('loss'):
         alpha = 0.3
-        loss = (1 - alpha) * loss_w + alpha * sent_loss + alpha * lexicon_loss
+        loss = (1 - alpha * 2) * loss_w + alpha * sent_loss + alpha * lexicon_loss
 
     # loss = loss_w
     with tf.name_scope('optimizer'):
         # Construct the SGD optimizer using a learning rate of 0.1.
-        learning_rate = 0.01
+        learning_rate = 0.2
         lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.0005)
-        optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step=global_step)
-        # optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
+        # optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step=global_step)
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -311,12 +314,12 @@ with tf.Session(graph=graph) as session:
     saver = tf.train.Saver()
     print("Initialized")
 
-    ckpt = tf.train.get_checkpoint_state('./checkpoints/')
+    ckpt = tf.train.get_checkpoint_state('./checkpoints_1/')
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(session, ckpt.model_checkpoint_path)
     init_step = session.run(global_step)
     data_index = init_step * 16
-    writer = tf.summary.FileWriter('./improved_graph/lr' + str(0.2), session.graph)
+    writer = tf.summary.FileWriter('./improved_graph_1/lr' + str(0.2), session.graph)
     average_loss = 0
     for step in xrange(init_step, num_steps):
         '''
@@ -336,8 +339,8 @@ with tf.Session(graph=graph) as session:
         if (step + 1) % 2000 == 0:
             average_loss /= 2000
             # The average loss is an estimate of the loss over the last 2000 batches.
-            print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1)
-            saver.save(session, './checkpoints/skip-gram', step+1)
+            print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1, ":", len(word_dict))
+            saver.save(session, './checkpoints_1/skip-gram', step+1)
             average_loss = 0
 
         # Note that this is expensive (~20% slowdown if computed every 500 steps)
@@ -359,7 +362,7 @@ print(data_index)
 
 
 def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_weibo_s_l.txt', 'w')
+    f = open('vec_weibo_s_l_700m.txt', 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
