@@ -163,7 +163,8 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 3500000
+    num = 2000000
+    '''
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
@@ -174,25 +175,38 @@ def main():
     weibo.extend(weibo_pos)
     weibo.extend(weibo_neg)
     print len(weibo)
+    '''
+    f_top = open('./weibo_emotion/train_weibo_200M.txt', 'r')
+    weibo = []
+    top = []
+    for line in f_top.readlines():
+        line = line.strip().decode('utf-8').split()
+        weibo.append(line[:-1])
+        top.append(int(line[-1]))
+    print len(weibo)
+    print len(top)
     # random.shuffle(weibo)
-    del weibo_pos
-    del weibo_neg
+    # del weibo_pos
+    # del weibo_neg
     index = np.arange(len(weibo))
     np.random.shuffle(index)
     weibo = np.array(weibo)
     weibo = weibo[index]
 
-    weibo_sent = num * [1]
-    weibo_sent.extend(num * [0])
+    weibo_sent = num * [0]
+    weibo_sent.extend(num * [1])
     print len(weibo_sent)
     weibo_sent = np.array(weibo_sent)
     weibo_sent = weibo_sent[index]
 
+    top = np.array(top)
+    top = top[index]
+
     # print weibo_sent[:10], weibo_sent[-10:-1]
     ts = set_words_sentiment(weibo, weibo_sent)
     print len(ts)
-    # tp = set_words_topic(tweets, tweets_topic)
-    # print len(tp)
+    tp = set_words_topic(weibo, top)
+    print len(tp)
     words = tweets_to_wordlist(weibo)
     print(len(words))
     # print " ".join(words[:10])
@@ -203,6 +217,7 @@ def main():
     # print words_sent_lexicon[:10]
     del weibo
     del weibo_sent
+    del top
     del index
     data, count, dictionary, reverse_dictionary = build_dataset(words)
     vocab_counts = []
@@ -258,7 +273,7 @@ def main():
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return data, ts, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
+    return data, ts, tp, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
 
 if __name__ == "__main__":
     main()
