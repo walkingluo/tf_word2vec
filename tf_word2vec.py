@@ -169,6 +169,16 @@ def generate_batch(batch_size, num_skips, skip_window):
     # Backtrack a little bit to avoid skipping words in the end of a batch
     data_index = (data_index + len(data) - span) % len(data)
     return batch, labels, labels_sent, labels_lexicon, labels_topic
+
+
+def save_vec(embeddings, reverse_dictionary):
+    f = open('vec_weibo_s_l_t_200m.txt', 'w')
+    f.write('%s %s\n' % (vocabulary_size, embedding_size))
+    for i in range(vocabulary_size):
+        word = reverse_dictionary[i]
+        embed = ' '.join(list(embeddings[i].astype(np.str))).encode('utf-8')
+        f.write("%s %s\n" % (word.encode('utf-8'), embed))
+    f.close()
 '''
 batch, labels, labels_sent = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 for i in range(8):
@@ -341,7 +351,7 @@ with tf.Session(graph=graph) as session:
             # The average loss is an estimate of the loss over the last 2000 batches.
             print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1, ":", len(word_dict))
             saver.save(session, './checkpoints_2/skip-gram', step+1)
-            if step > 1000000 and average_loss < min_loss:
+            if step > 1500000 and average_loss < min_loss:
                 final_embeddings = normalized_embeddings.eval()
                 print('saving vector')
                 save_vec(final_embeddings, reverse_dictionary)
@@ -363,19 +373,9 @@ with tf.Session(graph=graph) as session:
 
 print(data_index)
 
-
-def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_weibo_s_l_t_200m.txt', 'w')
-    f.write('%s %s\n' % (vocabulary_size, embedding_size))
-    for i in range(vocabulary_size):
-        word = reverse_dictionary[i]
-        embed = ' '.join(list(embeddings[i].astype(np.str))).encode('utf-8')
-        f.write("%s %s\n" % (word.encode('utf-8'), embed))
-    f.close()
-
 # print('saving vector')
 # save_vec(final_embeddings, reverse_dictionary)
-print 'done'
+# print 'done'
 
 
 def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):

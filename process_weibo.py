@@ -115,16 +115,20 @@ def preprocess_weibo(text):
     text_re = re.sub(huifu_re, '', text_re)
 
     handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9 ]+#')
-    text_re = re.sub(handles_re, '_HANDLES_ ', text_re)
+    text_re = re.sub(handles_re, '', text_re)
 
     url_re = re.compile(r'[a-zA-z]+://[a-zA-Z0-9\./]+')
-    text_re = re.sub(url_re, '_URL_ ', text_re)
+    text_re = re.sub(url_re, '', text_re)
 
     repeat_re = re.compile(r'([!?a-z])\1{1,}', re.IGNORECASE)
 
     def rpt_repl(match):
         return match.group(1)
     text_re = re.sub(repeat_re, rpt_repl, text_re)
+
+    reg_eng = re.compile(u'[a-zA-Z0-9@#]+')
+    text_re = re.sub(reg_eng, '', text_re)
+
     return text_re
 
 
@@ -273,6 +277,47 @@ def process_weibo_deep():
     fn.close()
     fo_p.close()
     fo_n.close()
+
+
+def make_training_data():
+    f = open('./weibo/data.txt', 'r')
+    f_out = open('./weibo/train_set.txt', 'w')
+    jieba.load_userdict('./dict/dict.txt')
+    num = 0
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split('|**|')
+        weibo = HanziConv.toSimplified(line[1])
+        weibo = preprocess_weibo(weibo)
+        seg_list = jieba.lcut(weibo)
+        seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
+        if len(seg_list) > 7:
+            weibo = ' '.join(seg_list)
+            f_out.write('%s %d\n' % (weibo.encode('utf-8'), int(line[2])))
+            num += 1
+            print num
+    f.close()
+    f_out.close()
+
+
+def process_xml():
+    fn = open('./NLPCC/sample.negative.txt', 'r')
+    fn_out = open('./NLPCC/clean_neg.txt', 'w')
+    fp = open('./NLPCC/sample.positive.txt', 'r')
+    fp_out = open('./NLPCC/clean_pos.txt', 'w')
+    temp = []
+    for line in fp.readlines():
+        line = line.strip().decode('utf-8')
+        if line:
+            temp.append(line)
+        if line == u'</review>':
+            weibo = ' '.join(temp[1:-1])
+            weibo = re.sub(u'\r', ' ', weibo)
+            fp_out.write('%s\n' % weibo.encode('utf-8'))
+            temp = []
+    fn.close()
+    fn_out.close()
+    fp.close()
+    fp_out.close()
 
 
 def main():
@@ -463,4 +508,6 @@ if __name__ == '__main__':
     # clean_weibo()
     # create_chinese_dict()
     # get_emotion_word()
-    process_weibo_deep()
+    # process_weibo_deep()
+    # make_training_data()
+    process_xml()
