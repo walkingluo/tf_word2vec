@@ -7,6 +7,7 @@ import re
 from hanziconv import HanziConv
 import numpy as np
 from collections import Counter
+import xml.etree.ElementTree as ET
 
 random.seed(1177)
 
@@ -299,25 +300,61 @@ def make_training_data():
     f_out.close()
 
 
-def process_xml():
+def process_txt():
+    '''
     fn = open('./NLPCC/sample.negative.txt', 'r')
     fn_out = open('./NLPCC/clean_neg.txt', 'w')
     fp = open('./NLPCC/sample.positive.txt', 'r')
     fp_out = open('./NLPCC/clean_pos.txt', 'w')
+    '''
+    ft = open('./NLPCC/test.label.cn.txt', 'r')
+    ft_out = open('./NLPCC/clean_test.txt', 'w')
     temp = []
-    for line in fp.readlines():
+    for line in ft.readlines():
         line = line.strip().decode('utf-8')
         if line:
             temp.append(line)
         if line == u'</review>':
             weibo = ' '.join(temp[1:-1])
-            weibo = re.sub(u'\r', ' ', weibo)
-            fp_out.write('%s\n' % weibo.encode('utf-8'))
+            #weibo = re.sub(u'\r', ' ', weibo)
+            label = int(re.findall(u'"[0-9]+"', temp[0])[1].replace('"', ''))
+            ft_out.write('%s %d\n' % (weibo.encode('utf-8'), label))
             temp = []
+    '''
     fn.close()
     fn_out.close()
     fp.close()
     fp_out.close()
+    '''
+    ft.close()
+    ft_out.close()
+
+
+def process_xml():
+    fo = open('./NLPCC/training_set.txt', 'w')
+    tree = ET.parse('./NLPCC/training.xml')
+    root = tree.getroot()
+    weibo = []
+    pos = ['happiness', 'like', 'surprise']
+    neg = ['disgust', 'fear', 'anger', 'sadness']
+    neu = ['none']
+    for c in root:
+        labels = c.attrib['emotion-type1']
+        if labels in pos:
+            label = 2
+        elif labels in neg:
+            label = 0
+        elif labels in neu:
+            label = 1
+        else:
+            print "error: not find a label"
+            return
+        for s in c:
+            weibo.append(s.text)
+        str_weibo = ' '.join(weibo)
+        fo.write('%s %d\n' % (str_weibo.encode('utf-8'), label))
+        weibo = []
+    fo.close()
 
 
 def main():
@@ -510,4 +547,5 @@ if __name__ == '__main__':
     # get_emotion_word()
     # process_weibo_deep()
     # make_training_data()
+    # process_txt()
     process_xml()
