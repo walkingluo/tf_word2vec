@@ -300,39 +300,77 @@ def make_training_data():
     f_out.close()
 
 
-def process_txt():
+def make_testing_data():
+    # fn = open('./NLPCC/clean_neg.txt', 'r')
+    # fp = open('./NLPCC/clean_pos.txt', 'r')
+    # ft = open('./NLPCC/clean_test.txt', 'r')
+    # fc = open('./NLPCC/emotion_test_set.txt', 'r')
+    f_nlp13 = open('./NLPCC/training_set_nlpcc2013.txt', 'r')
+    # fo = open('./NLPCC/test_data_nlpcc14_review_1.txt', 'w')
+    fo = open('./NLPCC/test_data_nlpcc13_weibo.txt', 'w')
+    jieba.load_userdict('./dict/dict.txt')
+
+    for line in f_nlp13.readlines():
+        line = line.strip().decode('utf-8').split(' ')
+        weibo = ''.join(line[:-1])
+        weibo = HanziConv.toSimplified(weibo)
+        weibo = preprocess_weibo(weibo)
+        seg_list = jieba.lcut(weibo)
+        seg_list = [w for w in seg_list if w not in punc and w not in punc_en and w not in [u'\u3000']]
+        if seg_list:
+            weibo = ' '.join(seg_list)
+            fo.write('%s %d\n' % (weibo.encode('utf-8'), int(line[-1])))
     '''
+    for line in fn.readlines():
+        line = line.strip().decode('utf-8')
+        weibo = HanziConv.toSimplified(line)
+        weibo = preprocess_weibo(weibo)
+        seg_list = jieba.lcut(weibo)
+        seg_list = [w for w in seg_list if w not in punc and w not in punc_en and w not in [u'\u3000']]
+        if seg_list:
+            weibo = ' '.join(seg_list)
+            fo.write('%s %d\n' % (weibo.encode('utf-8'), 0))
+    '''
+
+    # fp.close()
+    f_nlp13.close()
+    fo.close()
+
+
+def process_txt():
+
     fn = open('./NLPCC/sample.negative.txt', 'r')
     fn_out = open('./NLPCC/clean_neg.txt', 'w')
+    '''
     fp = open('./NLPCC/sample.positive.txt', 'r')
     fp_out = open('./NLPCC/clean_pos.txt', 'w')
     '''
-    ft = open('./NLPCC/test.label.cn.txt', 'r')
-    ft_out = open('./NLPCC/clean_test.txt', 'w')
+    # ft = open('./NLPCC/test.label.cn.txt', 'r')
+    # ft_out = open('./NLPCC/clean_test.txt', 'w')
     temp = []
-    for line in ft.readlines():
+    for line in fn.readlines():
         line = line.strip().decode('utf-8')
         if line:
             temp.append(line)
         if line == u'</review>':
             weibo = ' '.join(temp[1:-1])
-            #weibo = re.sub(u'\r', ' ', weibo)
-            label = int(re.findall(u'"[0-9]+"', temp[0])[1].replace('"', ''))
-            ft_out.write('%s %d\n' % (weibo.encode('utf-8'), label))
+            weibo = re.sub(u'\r', ' ', weibo)
+            # label = int(re.findall(u'"[0-9]+"', temp[0])[1].replace('"', ''))
+            fn_out.write('%s\n' % weibo.encode('utf-8'))
             temp = []
-    '''
     fn.close()
     fn_out.close()
+    '''
     fp.close()
     fp_out.close()
-    '''
     ft.close()
     ft_out.close()
+    '''
 
 
 def process_xml():
-    fo = open('./NLPCC/training_set.txt', 'w')
-    tree = ET.parse('./NLPCC/training.xml')
+    fo = open('./NLPCC/emotion_test_set.txt', 'w')
+    tree = ET.parse('./NLPCC/EmotionClassficationTest.xml')
     root = tree.getroot()
     weibo = []
     pos = ['happiness', 'like', 'surprise']
@@ -547,5 +585,6 @@ if __name__ == '__main__':
     # get_emotion_word()
     # process_weibo_deep()
     # make_training_data()
+    make_testing_data()
     # process_txt()
-    process_xml()
+    # process_xml()
