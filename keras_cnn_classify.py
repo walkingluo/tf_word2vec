@@ -1,11 +1,15 @@
+# coding=utf-8
+
 from keras.preprocessing import sequence
-from keras.layers import Convolution1D, Flatten, Dropout, Dense, LSTM, MaxPooling1D
-from keras.layers.embeddings import Embedding
 from keras.models import Sequential
+from keras.layers import Conv1D, GlobalMaxPooling1D
+from keras.layers import LSTM
+from keras.layers import Dropout, Dense, Activation
+from keras.layers import Embedding
 from keras.callbacks import Callback, EarlyStopping
 import numpy as np
-from test_data import main
 import matplotlib.pyplot as plt
+
 '''
 embeddings_index = {}
 f = open('./glove.6B/glove.6B.100d.txt', 'r')
@@ -18,8 +22,67 @@ f.close()
 
 print('Found %s word vectors.' % len(embeddings_index))
 '''
-X, y, _dict, reverse_dict = main()
-# print len(X), len(y), len(_dict), len(reverse_dict)
+
+
+def load_train_data(filename):
+    f = open(filename, 'r')
+    train = []
+    label = []
+    for line in f.readlines()[:200000]:
+        line = line.strip().decode('utf-8').split()
+        train.append(line[:-1])
+        t_label = int(line[-1])
+        if t_label == 2:
+            label.append(1)
+        else:
+            label.append(0)
+    return train, label
+
+
+def load_test_data(filename):
+    f = open(filename, 'r')
+    test = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        t_label = int(line[-1])
+        if t_label == 1:
+            continue
+        elif t_label == 2:
+            label.append(1)
+        else:
+            label.append(0)
+        test.append(line[:-1])
+    return test, label
+
+train, train_label = load_train_data('./weibo/train_set.txt')
+# test, test_label = load_test_data('./NLPCC/test_data_nlpcc14_weibo.txt')
+
+
+def read_vec(filename):
+    f = open(filename)
+    vocabulary_size, embedding_dim = f.readline().split()
+    embeddings = []
+    words = []
+    for line in f.readlines():
+        words.append(line.split()[0])
+        embeddings.append([float(num) for num in line.split()[1:]])
+        # embeddings.append(line.split()[1:])
+    f.close()
+    return vocabulary_size, embedding_dim, embeddings, words
+
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s.txt')
+vocabulary_size = int(vocabulary_size)
+embedding_dim = int(embedding_dim)
+embeddings = np.array(embeddings)
+print len(words)
+
+
+def build_dict(words):
+    words_dictionary = dict()
+    for w in words:
+        words_dictionary[w] = len(words_dictionary)
+    return words_dictionary
 
 
 def word_to_id(tweets, dictionary):
@@ -35,34 +98,13 @@ def word_to_id(tweets, dictionary):
         tweets_to_id.append(tweet_to_id)
     return tweets_to_id
 
-tweets_to_id = word_to_id(X, _dict)
+dictionary = build_dict(words)
+train_id = word_to_id(train, dictionary)
+# test_id = word_to_id(test, dictionary)
+print len(train_id)
 
-# n = len(tweets_to_id)
-train_num = 8000
-vaild_num = 9000
-print len(tweets_to_id)
-# print tweets_to_id[:2]
-
-
-def read_vec(filename):
-    f = open(filename)
-    vocabulary_size, embedding_dim = f.readline().split()
-    embeddings = []
-    words = []
-    for line in f.readlines():
-        words.append(line.split()[0])
-        embeddings.append([float(num) for num in line.split()[1:]])
-        # embeddings.append(line.split()[1:])
-    f.close()
-    return vocabulary_size, embedding_dim, embeddings, words
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_s_t_l.txt')
-print len(words), type(words[0])
-print words[:5]
-vocabulary_size = int(vocabulary_size)
-embedding_dim = int(embedding_dim)
-embeddings = np.array(embeddings)
-count = 0
 '''
+count = 0
 for i in range(vocabulary_size):
     try:
         embeddings[i] = embeddings_index[words[i]]
@@ -70,24 +112,26 @@ for i in range(vocabulary_size):
         embeddings[i] = np.zeros(embedding_dim)
         count += 1
         continue
-'''
 print count
-
+'''
+train_num = 100000
+vaild_num = train_num + 50000
 max_weibo_length = 140
-X_train = tweets_to_id[:train_num]
-y_train = np.array(y[:train_num])
+
+X_train = train_id[:train_num]
+y_train = np.array(train_label[:train_num])
 X_train = sequence.pad_sequences(X_train,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_valid = tweets_to_id[train_num:vaild_num]
-y_vaild = np.array(y[train_num:vaild_num])
+X_valid = train_id[train_num:vaild_num]
+y_vaild = np.array(train_label[train_num:vaild_num])
 X_valid = sequence.pad_sequences(X_valid,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_test = tweets_to_id[vaild_num:]
-y_test = np.array(y[vaild_num:])
+X_test = train_id[vaild_num:]
+y_test = np.array(train_label[vaild_num:])
 X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
@@ -110,24 +154,25 @@ model.add(Embedding(vocabulary_size,
                     trainable=False,
                     input_length=max_weibo_length,
                     dropout=0.2))
-model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
-model.add(MaxPooling1D(5))
-model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
-model.add(MaxPooling1D(5))
-model.add(Convolution1D(128, 5, border_mode='same', activation='relu'))
-model.add(MaxPooling1D(5))
-model.add(Flatten())
+model.add(Conv1D(250, 3, padding='valid', activation='relu', strides=1))
+model.add(GlobalMaxPooling1D())
+
+model.add(Dense(250))
 model.add(Dropout(0.2))
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(1, activation='sigmoid'))
+model.add(Activation('relu'))
+
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
 model.compile(loss='binary_crossentropy', optimizer='adam',
-              metrics=['accuracy', 'precision', 'recall', 'fbeta_score'])
+              metrics=['accuracy'])
+
 history = LossHistory()
 model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), nb_epoch=2,
-          batch_size=128, callbacks=[history])
+          batch_size=32, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
+
 print model.metrics_names
 print score
 print "Test loss: ", score[0]

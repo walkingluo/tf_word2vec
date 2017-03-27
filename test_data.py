@@ -157,6 +157,41 @@ def generate_batch_tweet(data, words_sent, batch_size, num_skips, skip_window):
     return batch, labels, labels_sent  # , labels_topic
 
 
+def load_data():
+    f = open('./weibo/train_set.txt', 'r')
+    train = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        train.append(line[:-1])
+        t_label = int(line[-1])
+        if t_label == 2:
+            label.append(1)
+        else:
+            label.append(0)
+    return train, label
+
+
+def load_test_data(filename):
+    f = open(filename, 'r')
+    test = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        t_label = int(line[-1])
+        if t_label == 1:
+            continue
+        elif t_label == 2:
+            label.append(1)
+        else:
+            label.append(0)
+        test.append(line[:-1])
+
+    print len(test)
+    print len(label)
+    # return test, label
+
+
 def main():
     # tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
     # tweets = tweets[:10000]
@@ -276,4 +311,6 @@ def main():
     return data, ts, tp, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
 
 if __name__ == "__main__":
-    main()
+    # main()
+    # load_data()
+    load_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
