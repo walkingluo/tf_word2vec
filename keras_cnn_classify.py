@@ -3,10 +3,10 @@
 from keras.preprocessing import sequence
 from keras.models import Sequential
 from keras.layers import Conv1D, GlobalMaxPooling1D
-from keras.layers import LSTM
 from keras.layers import Dropout, Dense, Activation, SpatialDropout1D
 from keras.layers import Embedding
-from keras.callbacks import Callback, EarlyStopping
+from keras.callbacks import Callback
+from keras import regularizers
 import keras.backend as K
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,7 +29,7 @@ def load_train_data(filename):
     f = open(filename, 'r')
     train = []
     label = []
-    for line in f.readlines()[:1000000]:
+    for line in f.readlines()[:100000]:
         line = line.strip().decode('utf-8').split()
         train.append(line[:-1])
         t_label = int(line[-1])
@@ -56,10 +56,8 @@ def load_test_data(filename):
         test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_data('./weibo/train_set.txt')
-print len(train)
-print len(train_label)
-# test, test_label = load_test_data('./NLPCC/test_data_nlpcc14_weibo.txt')
+# train, train_label = load_train_data('./weibo/train_set.txt')
+test, test_label = load_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
 
 def read_vec(filename):
@@ -74,12 +72,11 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
 print len(words)
-print words[:2]
 
 
 def build_dict(words):
@@ -102,10 +99,9 @@ def word_to_id(tweets, dictionary):
     return tweets_to_id
 
 dictionary = build_dict(words)
-train_id = word_to_id(train, dictionary)
-# test_id = word_to_id(test, dictionary)
-print len(train_id)
-print train_id[:2]
+# train_id = word_to_id(train, dictionary)
+test_id = word_to_id(test, dictionary)
+# print len(train_id)
 
 '''
 count = 0
@@ -119,24 +115,27 @@ for i in range(vocabulary_size):
 print count
 '''
 
-train_num = 800000
-vaild_num = train_num + 100000
+train_num = int(len(test_id) * 0.7)
+vaild_num = train_num + int(len(test_id) * 0.15)
+print train_num, vaild_num
 max_weibo_length = 140
 
-X_train = train_id[:train_num]
-y_train = np.array(train_label[:train_num])
+X_train = test_id[:train_num]
+y_train = np.array(test_label[:train_num])
 X_train = sequence.pad_sequences(X_train,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_valid = train_id[train_num:vaild_num]
-y_vaild = np.array(train_label[train_num:vaild_num])
+
+X_valid = test_id[train_num:vaild_num]
+y_vaild = np.array(test_label[train_num:vaild_num])
 X_valid = sequence.pad_sequences(X_valid,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
-X_test = train_id[vaild_num:]
-y_test = np.array(train_label[vaild_num:])
+
+X_test = test_id[vaild_num:]
+y_test = np.array(test_label[vaild_num:])
 X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
@@ -153,17 +152,23 @@ class LossHistory(Callback):
         self.losses.append(logs.get('loss'))
 
 model = Sequential()
+'''
+model.add(Embedding(vocabulary_size,
+                    embedding_dim,
+                    input_length=max_weibo_length))
+'''
 model.add(Embedding(vocabulary_size,
                     embedding_dim,
                     weights=[embeddings],
-                    trainable=True,
+                    trainable=False,
                     input_length=max_weibo_length))
-model.add(SpatialDropout1D(0.2))
 
-model.add(Conv1D(250, 3, padding='valid', activation='relu', strides=1))
+model.add(SpatialDropout1D(0.3))
+
+model.add(Conv1D(256, 3, padding='valid', activation='relu', strides=1))
 model.add(GlobalMaxPooling1D())
 
-model.add(Dense(250))
+model.add(Dense(256))
 model.add(Dropout(0.2))
 model.add(Activation('relu'))
 
@@ -227,8 +232,8 @@ model.compile(loss='binary_crossentropy', optimizer='adam',
               metrics=['accuracy', precision, recall, fbeta_score])
 
 history = LossHistory()
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=1,
-          batch_size=128, callbacks=[history])
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=14,
+          batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
 
