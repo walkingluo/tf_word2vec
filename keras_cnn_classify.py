@@ -1,5 +1,6 @@
 # coding=utf-8
 
+from keras.utils.np_utils import to_categorical
 from keras.preprocessing import sequence
 from keras.models import Sequential
 from keras.layers import Conv1D, GlobalMaxPooling1D
@@ -24,7 +25,7 @@ f.close()
 print('Found %s word vectors.' % len(embeddings_index))
 '''
 
-
+'''
 def load_train_data(filename):
     f = open(filename, 'r')
     train = []
@@ -38,9 +39,10 @@ def load_train_data(filename):
         else:
             label.append(0.)
     return train, label
+'''
 
 
-def load_test_data(filename):
+def load_train_test_data(filename):
     f = open(filename, 'r')
     test = []
     label = []
@@ -48,16 +50,19 @@ def load_test_data(filename):
         line = line.strip().decode('utf-8').split()
         t_label = int(line[-1])
         if t_label == 1:
-            continue
+            label.append(0.)
         elif t_label == 2:
             label.append(1.)
         else:
-            label.append(0.)
+            label.append(-1.)
         test.append(line[:-1])
     return test, label
 
-# train, train_label = load_train_data('./weibo/train_set.txt')
-test, test_label = load_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+
+categorical_train_label = to_categorical(train_label, num_classes=3)
+categorical_test_label = to_categorical(test_label, num_classes=3)
 
 
 def read_vec(filename):
@@ -99,7 +104,7 @@ def word_to_id(tweets, dictionary):
     return tweets_to_id
 
 dictionary = build_dict(words)
-# train_id = word_to_id(train, dictionary)
+train_id = word_to_id(train, dictionary)
 test_id = word_to_id(test, dictionary)
 # print len(train_id)
 
@@ -115,27 +120,27 @@ for i in range(vocabulary_size):
 print count
 '''
 
-train_num = int(len(test_id) * 0.7)
-vaild_num = train_num + int(len(test_id) * 0.15)
-print train_num, vaild_num
+train_num = int(len(train_id) * 0.9)
+# vaild_num = train_num + int(len(test_id) * 0.1)
+# print train_num, vaild_num
 max_weibo_length = 140
 
-X_train = test_id[:train_num]
-y_train = np.array(test_label[:train_num])
+X_train = train_id[:train_num]
+y_train = np.array(categorical_train_label[:train_num])
 X_train = sequence.pad_sequences(X_train,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
 
-X_valid = test_id[train_num:vaild_num]
-y_vaild = np.array(test_label[train_num:vaild_num])
+X_valid = train_id[train_num:]
+y_vaild = np.array(categorical_train_label[train_num:])
 X_valid = sequence.pad_sequences(X_valid,
                                  maxlen=max_weibo_length,
                                  padding='post',
                                  truncating='post')
 
-X_test = test_id[vaild_num:]
-y_test = np.array(test_label[vaild_num:])
+X_test = test_id[:]
+y_test = np.array(categorical_test_label[:])
 X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
@@ -172,8 +177,8 @@ model.add(Dense(256))
 model.add(Dropout(0.2))
 model.add(Activation('relu'))
 
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
+model.add(Dense(3))
+model.add(Activation('softmax'))
 
 
 def precision(y_true, y_pred):
@@ -228,7 +233,7 @@ def fbeta_score(y_true, y_pred, beta=1):
     fbeta_score = (1 + bb) * (p * r) / (bb * p + r + K.epsilon())
     return fbeta_score
 
-model.compile(loss='binary_crossentropy', optimizer='adam',
+model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy', precision, recall, fbeta_score])
 
 history = LossHistory()

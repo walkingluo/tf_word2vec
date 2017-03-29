@@ -305,7 +305,7 @@ def make_testing_data():
     # fp = open('./NLPCC/clean_pos.txt', 'r')
     # ft = open('./NLPCC/clean_test.txt', 'r')
     # fc = open('./NLPCC/emotion_test_set.txt', 'r')
-    f_nlp13 = open('./NLPCC/training_set_nlpcc2013.txt', 'r')
+    f_nlp13 = open('./NLPCC/preprocess/test_set_nlpcc13.txt', 'r')
     # fo = open('./NLPCC/test_data_nlpcc14_review_1.txt', 'w')
     fo = open('./NLPCC/test_data_nlpcc13_weibo.txt', 'w')
     jieba.load_userdict('./dict/dict.txt')
@@ -369,15 +369,15 @@ def process_txt():
 
 
 def process_xml():
-    fo = open('./NLPCC/emotion_test_set.txt', 'w')
-    tree = ET.parse('./NLPCC/EmotionClassficationTest.xml')
+    fo = open('./NLPCC/train_set_nlpcc13.txt', 'w')
+    tree = ET.parse('./NLPCC/nlpcc13_train.xml')
     root = tree.getroot()
     weibo = []
     pos = ['happiness', 'like', 'surprise']
     neg = ['disgust', 'fear', 'anger', 'sadness']
     neu = ['none']
     for c in root:
-        labels = c.attrib['emotion-type1']
+        labels = c.attrib['emotion-type']
         if labels in pos:
             label = 2
         elif labels in neg:
@@ -388,7 +388,8 @@ def process_xml():
             print "error: not find a label"
             return
         for s in c:
-            weibo.append(s.text)
+            if s.text:
+                weibo.append(s.text)
         str_weibo = ' '.join(weibo)
         fo.write('%s %d\n' % (str_weibo.encode('utf-8'), label))
         weibo = []
@@ -396,12 +397,22 @@ def process_xml():
 
 
 def main():
+    '''
     dir_s = './2012_weibo/weibo%s.txt'
     dir_t = './weibo_emotion/week%s.txt'
     for i in range(1, 5):
         s = dir_s % str(i)
         t = dir_t % str(i+76)
         find_emotion(s, t)
+    '''
+    f = open('./NLPCC/preprocess/train_set_nlpcc14.txt', 'r')
+    fo = open('./NLPCC/preprocess/train_set_nlpcc13.txt', 'w')
+
+    for line in f.readlines()[:10000]:
+        fo.write('%s' % line)
+
+    f.close()
+    fo.close()
 
 
 def clean_weibo():
