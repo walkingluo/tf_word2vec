@@ -26,21 +26,45 @@ f.close()
 print('Found %s word vectors.' % len(embeddings_index))
 '''
 
-'''
-def load_train_data(filename):
+
+def load_pos_neg_data(filename):
     f = open(filename, 'r')
     train = []
     label = []
-    for line in f.readlines()[:100000]:
+    for line in f.readlines():
         line = line.strip().decode('utf-8').split()
-        train.append(line[:-1])
-        t_label = int(line[-1])
-        if t_label == 2:
-            label.append(1.)
+        if int(line[-1]) in [0, 3]:
+            continue
+        elif int(line[-1]) in [4, 5, 6, 7]:
+            train.append(line[:-1])
+            label.append(0)
         else:
-            label.append(0.)
+            train.append(line[:-1])
+            label.append(1)
     return train, label
-'''
+
+
+def load_4_classify_data(filename):
+    f = open(filename, 'r')
+    train = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        if int(line[-1]) in [0, 3, 5, 6]:
+            continue
+        elif int(line[-1]) == 1:
+            train.append(line[:-1])
+            label.append(0)
+        elif int(line[-1]) == 2:
+            train.append(line[:-1])
+            label.append(1)
+        elif int(line[-1]) == 7:
+            train.append(line[:-1])
+            label.append(2)
+        else:
+            train.append(line[:-1])
+            label.append(3)
+    return train, label
 
 
 def load_train_test_data(filename):
@@ -49,21 +73,20 @@ def load_train_test_data(filename):
     label = []
     for line in f.readlines():
         line = line.strip().decode('utf-8').split()
-        t_label = int(line[-1])
-        if t_label == 1:
-            label.append(0)
-        elif t_label == 2:
-            label.append(1)
-        else:
-            label.append(2)
-        test.append(line[:-1])
+        if int(line[-1]) != 0:
+            label.append(int(line[-1]) - 1)
+            test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
-test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+# train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+# test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+# train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+# test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=3)
-categorical_test_label = to_categorical(test_label, num_classes=3)
+categorical_train_label = to_categorical(train_label, num_classes=4)
+categorical_test_label = to_categorical(test_label, num_classes=4)
 
 
 def read_vec(filename):
@@ -178,7 +201,7 @@ model.add(Dense(256))
 model.add(Dropout(0.2))
 model.add(Activation('relu'))
 
-model.add(Dense(3))
+model.add(Dense(4))
 model.add(Activation('softmax'))
 
 
@@ -238,7 +261,22 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=5,
+# random embeddings
+# epochs = 4 0.271 0.36
+# epochs = 5 0.267 0.375
+# epochs = 6 0.261 0.368
+# epochs = 7 0.276 0.353
+# epochs = 8 0.268 0.365
+# epochs = 9 0.268 0.339
+
+# fixed embeddings
+# epochs = 10 0.216 0.402
+# epochs = 23 0.269 0.399
+# epochs = 24 0.284 0.410
+# epochs = 25 0.260 0.412
+# epochs = 30 0.262 0.378
+# epochs = 50 0.266 0.359
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=35,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)

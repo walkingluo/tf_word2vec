@@ -305,9 +305,9 @@ def make_testing_data():
     # fp = open('./NLPCC/clean_pos.txt', 'r')
     # ft = open('./NLPCC/clean_test.txt', 'r')
     # fc = open('./NLPCC/emotion_test_set.txt', 'r')
-    f_nlp13 = open('./NLPCC/preprocess/test_set_nlpcc13.txt', 'r')
+    f_nlp13 = open('./NLPCC/1/test_set_nlpcc14.txt', 'r')
     # fo = open('./NLPCC/test_data_nlpcc14_review_1.txt', 'w')
-    fo = open('./NLPCC/test_data_nlpcc13_weibo.txt', 'w')
+    fo = open('./NLPCC/1/test_data_nlpcc14_weibo.txt', 'w')
     jieba.load_userdict('./dict/dict.txt')
 
     for line in f_nlp13.readlines():
@@ -370,7 +370,7 @@ def process_txt():
 
 def process_xml():
     fo = open('./NLPCC/train_set_nlpcc13.txt', 'w')
-    tree = ET.parse('./NLPCC/nlpcc13_train.xml')
+    tree = ET.parse('./NLPCC/raw_data/nlpcc13_train.xml')
     root = tree.getroot()
     weibo = []
     pos = ['happiness', 'like', 'surprise']
@@ -378,12 +378,22 @@ def process_xml():
     neu = ['none']
     for c in root:
         labels = c.attrib['emotion-type']
-        if labels in pos:
-            label = 2
-        elif labels in neg:
-            label = 0
-        elif labels in neu:
+        if labels in ['happiness']:
             label = 1
+        elif labels in ['like']:
+            label = 2
+        elif labels in ['surprise']:
+            label = 3
+        elif labels in ['disgust']:
+            label = 4
+        elif labels in ['fear']:
+            label = 5
+        elif labels in ['anger']:
+            label = 6
+        elif labels in ['sadness']:
+            label = 7
+        elif labels in ['none']:
+            label = 0
         else:
             print "error: not find a label"
             return
@@ -405,8 +415,8 @@ def main():
         t = dir_t % str(i+76)
         find_emotion(s, t)
     '''
-    f = open('./NLPCC/preprocess/train_set_nlpcc14.txt', 'r')
-    fo = open('./NLPCC/preprocess/train_set_nlpcc13.txt', 'w')
+    f = open('./NLPCC/train_set_nlpcc14.txt', 'r')
+    fo = open('./NLPCC/test_set_nlpcc13.txt', 'w')
 
     for line in f.readlines()[:10000]:
         fo.write('%s' % line)
