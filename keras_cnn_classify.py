@@ -11,7 +11,7 @@ from keras import regularizers
 import keras.backend as K
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 
 '''
 embeddings_index = {}
@@ -235,10 +235,10 @@ def fbeta_score(y_true, y_pred, beta=1):
     return fbeta_score
 
 model.compile(loss='categorical_crossentropy', optimizer='adam',
-              metrics=['accuracy', precision, recall, fbeta_score])
+              metrics=['accuracy'])
 
 history = LossHistory()
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=20,
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=5,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
@@ -246,11 +246,23 @@ score = model.evaluate(X_test, y_test)
 y_p = model.predict_classes(X_test)
 test_label = np.array(test_label)
 print
-print test_label[:10]
-print y_p[:10]
+print test_label[:20]
+print y_p[:20]
+acc = accuracy_score(test_label, y_p)
+# weighted_f1 = f1_score(test_label, y_p, average='weighted')
+macro_precision = precision_score(test_label, y_p, average='macro')
+macro_recall = recall_score(test_label, y_p, average='macro')
 macro_f1 = f1_score(test_label, y_p, average='macro')
+micro_precision = precision_score(test_label, y_p, average='micro')
+micro_recall = recall_score(test_label, y_p, average='micro')
 micro_f1 = f1_score(test_label, y_p, average='micro')
+print 'Acc: ', acc
+# print 'Weighted F1: ', weighted_f1
+print 'Macro precision: ', macro_precision
+print 'Macro recall: ', macro_recall
 print 'Macro F1: ', macro_f1
+print 'Micro precision: ', micro_precision
+print 'Micro recall: ', micro_recall
 print 'Micro F1: ', micro_f1
 
 print model.metrics_names
