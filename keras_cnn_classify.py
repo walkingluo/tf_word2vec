@@ -11,6 +11,7 @@ from keras import regularizers
 import keras.backend as K
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
 
 '''
 embeddings_index = {}
@@ -50,15 +51,15 @@ def load_train_test_data(filename):
         line = line.strip().decode('utf-8').split()
         t_label = int(line[-1])
         if t_label == 1:
-            label.append(0.)
+            label.append(0)
         elif t_label == 2:
-            label.append(1.)
+            label.append(1)
         else:
-            label.append(-1.)
+            label.append(2)
         test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
 categorical_train_label = to_categorical(train_label, num_classes=3)
@@ -237,10 +238,20 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy', precision, recall, fbeta_score])
 
 history = LossHistory()
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=14,
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=20,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
+
+y_p = model.predict_classes(X_test)
+test_label = np.array(test_label)
+print
+print test_label[:10]
+print y_p[:10]
+macro_f1 = f1_score(test_label, y_p, average='macro')
+micro_f1 = f1_score(test_label, y_p, average='micro')
+print 'Macro F1: ', macro_f1
+print 'Micro F1: ', micro_f1
 
 print model.metrics_names
 print score
