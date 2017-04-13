@@ -280,6 +280,36 @@ def process_weibo_deep():
     fo_n.close()
 
 
+def re_segment_words():
+    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'r')
+    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'r')
+    fo_p = open('./weibo_emotion/re_segment_data_pos.txt', 'w')
+    fo_n = open('./weibo_emotion/re_segment_data_neg.txt', 'w')
+
+    jieba.load_userdict('./dict/dd_dict.txt')
+    num = 0
+    for line in fp.readlines():
+        line = ''.join(line.strip().decode('utf-8').split())
+        seg = jieba.lcut(line)
+        w = ' '.join(seg)
+        fo_p.write('%s\n' % w.encode('utf-8'))
+        num += 1
+        print num
+    num = 0
+    for line in fn.readlines():
+        line = ''.join(line.strip().decode('utf-8').split())
+        seg = jieba.lcut(line)
+        w = ' '.join(seg)
+        fo_n.write('%s\n' % w.encode('utf-8'))
+        num += 1
+        print num
+
+    fp.close()
+    fn.close()
+    fo_p.close()
+    fo_n.close()
+
+
 def make_training_data():
     f = open('./weibo/data.txt', 'r')
     f_out = open('./weibo/train_set.txt', 'w')
@@ -490,14 +520,13 @@ def get_train_data():
 
 
 def create_custom_dict():
-    f1 = open('./dict/SogouR.txt', 'r')
-    f2 = open('./dict/dict_.txt', 'r')
+
     f3 = open('./dict/pos_words.txt', 'r')
     f4 = open('./dict/neg_words.txt', 'r')
     f5 = open('./dict/neu_words.txt', 'r')
-    fd = open('./dict/dict.txt', 'w')
-
+    fd = open('./dict/dd_dict.txt', 'a')
     words = []
+    '''
     for line in f1.readlines():
         words.extend(line.strip().split()[0].decode('utf-8').split('-'))
         # words.append(line.strip().split()[0].split('-')[0].decode('utf-8'))
@@ -506,6 +535,7 @@ def create_custom_dict():
     for line in f2.readlines():
         words.append(line.strip().decode('utf-8'))
     print len(words)
+    '''
     for line in f3.readlines():
         words.append(line.strip().decode('utf-8'))
     print len(words)
@@ -518,12 +548,20 @@ def create_custom_dict():
 
     words = set(words)
     print len(words)
+    '''
+    f = open('./dict/dd.txt', 'r')
+    fd = open('./dict/dd_dict.txt', 'w')
+    words = []
 
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split('\t')
+        w = line[1]
+        n = line[2].split()[0]
+        fd.write("%s %s\n" % (w.encode('utf-8'), n.encode('utf-8')))
+    '''
     for word in words:
-        fd.write("%s\n" % word.encode('utf-8'))
+        fd.write("%s %s\n" % (word.encode('utf-8'), 1))
 
-    f1.close()
-    f2.close()
     f3.close()
     f4.close()
     f5.close()
@@ -606,6 +644,7 @@ if __name__ == '__main__':
     # get_emotion_word()
     # process_weibo_deep()
     # make_training_data()
-    make_testing_data()
+    # make_testing_data()
     # process_txt()
     # process_xml()
+    re_segment_words()
