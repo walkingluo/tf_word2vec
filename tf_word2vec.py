@@ -172,8 +172,8 @@ def generate_batch(batch_size, num_skips, skip_window):
     return batch, labels, labels_sent, labels_lexicon
 
 
-def save_vec(embeddings, reverse_dictionary):
-    f = open('vec_s_l_400m_re_seg.txt', 'w')
+def save_vec(filename, embeddings, reverse_dictionary):
+    f = open(filename, 'w')
     f.write('%s %s\n' % (vocabulary_size, embedding_size))
     for i in range(vocabulary_size):
         word = reverse_dictionary[i]
@@ -322,6 +322,7 @@ with graph.as_default():
 
 with tf.Session(graph=graph) as session:
     # We must initialize all variables before we use them.
+    filename = 'vec_s_l_400m_re_seg.txt'
     init.run()
     saver = tf.train.Saver()
     print("Initialized")
@@ -358,7 +359,7 @@ with tf.Session(graph=graph) as session:
             if step > 1500000 and average_loss < min_loss:
                 final_embeddings = normalized_embeddings.eval()
                 print('saving vector')
-                save_vec(final_embeddings, reverse_dictionary)
+                save_vec(filename, final_embeddings, reverse_dictionary)
                 min_loss = average_loss
             average_loss = 0
 
@@ -377,9 +378,10 @@ with tf.Session(graph=graph) as session:
 
 print(data_index)
 
-# print('saving vector')
-# save_vec(final_embeddings, reverse_dictionary)
-# print 'done'
+
+print('saving final vector')
+save_vec(filename='vec_s_l_400m_re_seg_final.txt', final_embeddings, reverse_dictionary)
+print 'done'
 
 
 def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):

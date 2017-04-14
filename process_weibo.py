@@ -310,6 +310,29 @@ def re_segment_words():
     fo_n.close()
 
 
+def re_segment_train_test_data():
+    file1 = './NLPCC/train_data_nlpcc14_weibo.txt'
+    file2 = './NLPCC/test_data_nlpcc14_weibo.txt'
+    out_file1 = './NLPCC/re_train_data_nlpcc14_weibo.txt'
+    out_file2 = './NLPCC/re_test_data_nlpcc14_weibo.txt'
+    f = open(file1, 'r')
+    fo = open(out_file1, 'w')
+
+    jieba.load_userdict('./dict/dd_dict.txt')
+    num = 0
+    for line in f.readlines():
+        s = line.strip().decode('utf-8').split()[-1]
+        line = ''.join(line.strip().decode('utf-8').split()[:-1])
+        seg = jieba.lcut(line)
+        w = ' '.join(seg)
+        fo.write('%s %s\n' % (w.encode('utf-8'), s.encode('utf-8')))
+        num += 1
+        print num
+
+    f.close()
+    fo.close()
+
+
 def make_training_data():
     f = open('./weibo/data.txt', 'r')
     f_out = open('./weibo/train_set.txt', 'w')
@@ -647,4 +670,5 @@ if __name__ == '__main__':
     # make_testing_data()
     # process_txt()
     # process_xml()
-    re_segment_words()
+    # re_segment_words()
+    re_segment_train_test_data()

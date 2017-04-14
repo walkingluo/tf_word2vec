@@ -1,5 +1,6 @@
 # coding=utf-8
 
+from __future__ import division
 from keras.utils.np_utils import to_categorical
 from keras.preprocessing import sequence
 from keras.models import Sequential
@@ -10,6 +11,7 @@ from keras.callbacks import Callback
 from keras import regularizers
 import keras.backend as K
 import numpy as np
+import collections
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 
@@ -78,15 +80,15 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-# train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
-# test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/re_train_data_nlpcc13_weibo.txt')
+test, test_label = load_train_test_data('./NLPCC/re_test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
-train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
-test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+# train, train_label = load_4_classify_data('./NLPCC/re_train_data_nlpcc13_weibo.txt')
+# test, test_label = load_4_classify_data('./NLPCC/re_test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=4)
-categorical_test_label = to_categorical(test_label, num_classes=4)
+categorical_train_label = to_categorical(train_label, num_classes=7)
+categorical_test_label = to_categorical(test_label, num_classes=7)
 
 
 def read_vec(filename):
@@ -101,7 +103,7 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_s_l_400m_re_seg.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -144,7 +146,7 @@ for i in range(vocabulary_size):
 print count
 '''
 
-train_num = int(len(train_id) * 0.9)
+train_num = int(len(train_id) * 0.95)
 # vaild_num = train_num + int(len(test_id) * 0.1)
 # print train_num, vaild_num
 max_weibo_length = 140
@@ -192,7 +194,7 @@ model.add(Embedding(vocabulary_size,
                     trainable=False,
                     input_length=max_weibo_length))
 
-model.add(SpatialDropout1D(0.3))
+model.add(SpatialDropout1D(0.2))
 
 model.add(Conv1D(256, 3, padding='valid', activation='relu', strides=1))
 model.add(GlobalMaxPooling1D())
@@ -201,7 +203,7 @@ model.add(Dense(256))
 model.add(Dropout(0.2))
 model.add(Activation('relu'))
 
-model.add(Dense(4))
+model.add(Dense(7))
 model.add(Activation('softmax'))
 
 
@@ -276,7 +278,7 @@ history = LossHistory()
 # epochs = 25 0.260 0.412
 # epochs = 30 0.262 0.378
 # epochs = 50 0.266 0.359
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=35,
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=40,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
@@ -308,6 +310,40 @@ print score
 print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
 
+system_correct = dict()
+for x, y in zip(y_p, test_label):
+    if x == y:
+        try:
+            system_correct[x] += 1
+        except Exception, e:
+            system_correct[x] = 1
+print system_correct.keys()
+print system_correct.values()
+system_proposed = collections.Counter(y_p)
+print system_proposed
+gold = collections.Counter(test_label)
+print gold
+sum_p = 0
+sum_r = 0
+sum_sys_cor = 0
+sum_sys_pro = 0
+sum_gold = 0
+for i in range(7):
+    if i != 4:
+        sum_p += system_correct[i] / system_proposed[i]
+        sum_r += system_correct[i] / gold[i]
+        sum_sys_cor += system_correct[i]
+        sum_sys_pro += system_proposed[i]
+    sum_gold += gold[i]
+
+ma_p = sum_p / 6
+ma_r = sum_r / 6
+ma_f = 2 * ma_p * ma_r / (ma_p + ma_r)
+print 'ma_f: ', ma_f
+mi_p = sum_sys_cor / sum_sys_pro
+mi_r = sum_sys_cor / sum_gold
+mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
+print 'mi_f: ', mi_f
 '''
 print history.history.keys()
 plt.plot(history.history['loss'])

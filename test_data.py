@@ -262,6 +262,7 @@ def main():
     data, count, dictionary, reverse_dictionary = build_dataset(words)
     print 'data len: ', len(data)
     print 'count len: ', len(count)
+    print count[:10]
     print 'dictionary len: ', len(dictionary)
     vocabulary_size = len(count)
     vocab_counts = []
