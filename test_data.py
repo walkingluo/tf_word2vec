@@ -20,13 +20,13 @@ def read_tweet(filename):
 
 
 def read_weibo():
-    fp = open('./weibo_emotion/re_segment_data_pos.txt', 'rb')
-    fn = open('./weibo_emotion/re_segment_data_neg.txt', 'rb')
+    fp = open('./weibo_emotion/clean_train_data_pos.txt', 'rb')
+    fn = open('./weibo_emotion/clean_train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:3000000]:
+    for line in fp.readlines()[:3500000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:3000000]:
+    for line in fn.readlines()[:3500000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -98,18 +98,18 @@ def get_word_lexicon():
         words_sent_lexicon.append(int(s.strip()))
     return words_sent_lexicon
 
-# vocabulary_size = 200000
+vocabulary_size = 200000
 min_count = 5
 
 
 def build_dataset(words):
     count = [['UNK', -1]]
-    count.extend(collections.Counter(words).most_common())
+    count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
     dictionary = dict()
     for word, n in count:
-        if n > min_count:
-            dictionary[word] = len(dictionary)
-    count = count[:len(dictionary)]
+        # if n > min_count:
+        dictionary[word] = len(dictionary)
+    # count = count[:len(dictionary)]
     data = list()
     unk_count = 0
     for word in words:
@@ -201,7 +201,7 @@ def main():
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 3000000
+    num = 3500000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)

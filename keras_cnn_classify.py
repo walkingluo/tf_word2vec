@@ -103,7 +103,7 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_s_l_400m_re_seg.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l_700m.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -191,10 +191,10 @@ model.add(Embedding(vocabulary_size,
 model.add(Embedding(vocabulary_size,
                     embedding_dim,
                     weights=[embeddings],
-                    trainable=False,
+                    trainable=True,
                     input_length=max_weibo_length))
 
-model.add(SpatialDropout1D(0.2))
+model.add(SpatialDropout1D(0.3))
 
 model.add(Conv1D(256, 3, padding='valid', activation='relu', strides=1))
 model.add(GlobalMaxPooling1D())
@@ -278,7 +278,7 @@ history = LossHistory()
 # epochs = 25 0.260 0.412
 # epochs = 30 0.262 0.378
 # epochs = 50 0.266 0.359
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=40,
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=3,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
@@ -329,12 +329,15 @@ sum_sys_cor = 0
 sum_sys_pro = 0
 sum_gold = 0
 for i in range(7):
-    if i != 4:
+    try:
         sum_p += system_correct[i] / system_proposed[i]
         sum_r += system_correct[i] / gold[i]
         sum_sys_cor += system_correct[i]
         sum_sys_pro += system_proposed[i]
-    sum_gold += gold[i]
+    except Exception, e:
+        print e
+    finally:
+        sum_gold += gold[i]
 
 ma_p = sum_p / 6
 ma_r = sum_r / 6
