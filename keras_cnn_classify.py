@@ -80,8 +80,8 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/re_train_data_nlpcc13_weibo.txt')
-test, test_label = load_train_test_data('./NLPCC/re_test_data_nlpcc13_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_4_classify_data('./NLPCC/re_train_data_nlpcc13_weibo.txt')
@@ -191,7 +191,7 @@ model.add(Embedding(vocabulary_size,
 model.add(Embedding(vocabulary_size,
                     embedding_dim,
                     weights=[embeddings],
-                    trainable=True,
+                    trainable=False,
                     input_length=max_weibo_length))
 
 model.add(SpatialDropout1D(0.3))
@@ -263,22 +263,8 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
-# random embeddings
-# epochs = 4 0.271 0.36
-# epochs = 5 0.267 0.375
-# epochs = 6 0.261 0.368
-# epochs = 7 0.276 0.353
-# epochs = 8 0.268 0.365
-# epochs = 9 0.268 0.339
 
-# fixed embeddings
-# epochs = 10 0.216 0.402
-# epochs = 23 0.269 0.399
-# epochs = 24 0.284 0.410
-# epochs = 25 0.260 0.412
-# epochs = 30 0.262 0.378
-# epochs = 50 0.266 0.359
-model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=3,
+model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
           batch_size=16, callbacks=[history])
 
 score = model.evaluate(X_test, y_test)
@@ -311,12 +297,13 @@ print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
 
 system_correct = dict()
+for i in range(7):
+    system_correct[i] = 0
+
 for x, y in zip(y_p, test_label):
     if x == y:
-        try:
-            system_correct[x] += 1
-        except Exception, e:
-            system_correct[x] = 1
+        system_correct[x] += 1
+
 print system_correct.keys()
 print system_correct.values()
 system_proposed = collections.Counter(y_p)
@@ -329,15 +316,11 @@ sum_sys_cor = 0
 sum_sys_pro = 0
 sum_gold = 0
 for i in range(7):
-    try:
-        sum_p += system_correct[i] / system_proposed[i]
-        sum_r += system_correct[i] / gold[i]
-        sum_sys_cor += system_correct[i]
-        sum_sys_pro += system_proposed[i]
-    except Exception, e:
-        print e
-    finally:
-        sum_gold += gold[i]
+    sum_p += system_correct[i] / (system_proposed[i] + K.epsilon())
+    sum_r += system_correct[i] / gold[i]
+    sum_sys_cor += system_correct[i]
+    sum_sys_pro += system_proposed[i]
+    sum_gold += gold[i]
 
 ma_p = sum_p / 6
 ma_r = sum_r / 6
