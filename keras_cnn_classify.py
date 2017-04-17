@@ -9,6 +9,7 @@ from keras.layers import Dropout, Dense, Activation, SpatialDropout1D
 from keras.layers import Embedding
 from keras.callbacks import Callback
 from keras import regularizers
+from keras.models import load_model
 import keras.backend as K
 import numpy as np
 import collections
@@ -80,7 +81,7 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
 test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
@@ -263,10 +264,12 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
-
+'''
 model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
           batch_size=16, callbacks=[history])
-
+'''
+del model
+model = load_model('my_model_13.h5')
 score = model.evaluate(X_test, y_test)
 
 y_p = model.predict_classes(X_test)
@@ -322,14 +325,16 @@ for i in range(7):
     sum_sys_pro += system_proposed[i]
     sum_gold += gold[i]
 
-ma_p = sum_p / 6
-ma_r = sum_r / 6
+ma_p = sum_p / 7
+ma_r = sum_r / 7
 ma_f = 2 * ma_p * ma_r / (ma_p + ma_r)
 print 'ma_f: ', ma_f
 mi_p = sum_sys_cor / sum_sys_pro
 mi_r = sum_sys_cor / sum_gold
 mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
 print 'mi_f: ', mi_f
+
+# model.save('my_model_14.h5')
 '''
 print history.history.keys()
 plt.plot(history.history['loss'])
