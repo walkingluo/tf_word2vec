@@ -37,12 +37,10 @@ def load_pos_neg_data(filename):
     label = []
     for line in f.readlines():
         line = line.strip().decode('utf-8').split()
-        if int(line[-1]) in [0, 3]:
-            continue
-        elif int(line[-1]) in [4, 5, 6, 7]:
+        if int(line[-1]) in [4, 5, 6, 7]:
             train.append(line[:-1])
             label.append(0)
-        else:
+        elif int(line[-1]) in [1, 2]:
             train.append(line[:-1])
             label.append(1)
     return train, label
@@ -54,9 +52,7 @@ def load_4_classify_data(filename):
     label = []
     for line in f.readlines():
         line = line.strip().decode('utf-8').split()
-        if int(line[-1]) in [0, 3, 5, 6]:
-            continue
-        elif int(line[-1]) == 1:
+        if int(line[-1]) == 1:
             train.append(line[:-1])
             label.append(0)
         elif int(line[-1]) == 2:
@@ -65,7 +61,7 @@ def load_4_classify_data(filename):
         elif int(line[-1]) == 7:
             train.append(line[:-1])
             label.append(2)
-        else:
+        elif int(line[-1]) == 4:
             train.append(line[:-1])
             label.append(3)
     return train, label
@@ -86,8 +82,8 @@ train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt'
 test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
-# train, train_label = load_4_classify_data('./NLPCC/re_train_data_nlpcc13_weibo.txt')
-# test, test_label = load_4_classify_data('./NLPCC/re_test_data_nlpcc13_weibo.txt')
+# train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
+# test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
 categorical_train_label = to_categorical(train_label, num_classes=7)
 categorical_test_label = to_categorical(test_label, num_classes=7)
@@ -265,12 +261,14 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
-
+ma_f_max = 0
+# for i in range(10):
+'''
 model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
           batch_size=16, callbacks=[history])
-
-# del model
-# model = load_model('my_model_14.h5')
+'''
+del model
+model = load_model('my_model_13_2.h5')
 score = model.evaluate(X_test, y_test)
 
 y_p = model.predict_classes(X_test)
@@ -334,8 +332,11 @@ mi_p = sum_sys_cor / sum_sys_pro
 mi_r = sum_sys_cor / sum_gold
 mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
 print 'mi_f: ', mi_f
-
-# model.save('my_model_14.h5')
+'''
+if ma_f > ma_f_max:
+    model.save('my_model_13_2.h5')
+    ma_f_max = ma_f
+'''
 '''
 print history.history.keys()
 plt.plot(history.history['loss'])
