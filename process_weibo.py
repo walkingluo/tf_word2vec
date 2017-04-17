@@ -354,18 +354,19 @@ def make_training_data():
 
 
 def make_testing_data():
+    # nlpcc13, 14 test 4458(happiness) (7263 7603) 8534(none)
+    # nlpcc14 test 285(n) 336(n) 905(happiness) 953(happiness) 1531(happiness)
+    # 1588(n) 2180(n) 2220(n) 2743(happiness) 3129(fear) 4550(n) 4734(fear)
     # fn = open('./NLPCC/clean_neg.txt', 'r')
     # fp = open('./NLPCC/clean_pos.txt', 'r')
     # ft = open('./NLPCC/clean_test.txt', 'r')
     # fc = open('./NLPCC/emotion_test_set.txt', 'r')
-    f_nlp13 = open('./NLPCC/1/test_set_nlpcc14.txt', 'r')
-    # fo = open('./NLPCC/test_data_nlpcc14_review_1.txt', 'w')
-    fo = open('./NLPCC/1/test_data_nlpcc14_weibo.txt', 'w')
-    jieba.load_userdict('./dict/dict.txt')
-
+    f_nlp13 = open('./NLPCC/1/test_set_nlpcc13_new.txt', 'r')
+    fo = open('./NLPCC/1/test_data_nlpcc13_weibo_old_1.txt', 'w')
+    jieba.load_userdict('./dict/dict_.txt')
     for line in f_nlp13.readlines():
         line = line.strip().decode('utf-8').split(' ')
-        weibo = ''.join(line[:-1])
+        weibo = ' '.join(line[:-1])
         weibo = HanziConv.toSimplified(weibo)
         weibo = preprocess_weibo(weibo)
         seg_list = jieba.lcut(weibo)
@@ -422,52 +423,67 @@ def process_txt():
 
 
 def process_xml():
-    # fo = open('./NLPCC/train_set_nlpcc13.txt', 'w')
-    tree = ET.parse('./NLPCC/raw_data/nlpcc14_train.xml')
+    fo = open('./NLPCC/raw_data/test_set_nlpcc13.txt', 'w')
+    tree = ET.parse('./NLPCC/raw_data/1.xml')
     root = tree.getroot()
     weibo = []
     pos = ['happiness', 'like', 'surprise']
     neg = ['disgust', 'fear', 'anger', 'sadness']
     neu = ['none']
-    h_label = 0
-    l_label = 0
-    su_label = 0
-    d_label = 0
-    f_label = 0
-    a_label = 0
-    s_label = 0
-    n_label = 0
-    for c in root[:10000]:
-        labels = c.attrib['emotion-type1']
-        if labels in ['happiness']:
-            h_label += 1
-        elif labels in ['like']:
-            l_label += 1
-        elif labels in ['surprise']:
-            su_label += 1
-        elif labels in ['disgust']:
-            d_label += 1
-        elif labels in ['fear']:
-            f_label += 1
-        elif labels in ['anger']:
-            a_label += 1
-        elif labels in ['sadness']:
-            s_label += 1
-        elif labels in ['none']:
-            n_label += 1
+    ha = 0
+    li = 0
+    su = 0
+    di = 0
+    fe = 0
+    an = 0
+    sa = 0
+    no = 0
+    num = 0
+    for c in root[:]:
+        num += 1
+        try:
+            labels = c.attrib['emotion-type1']
+        except Exception, e:
+            labels = c.attrib['emotion-type']
+        if labels in [u'高兴']:
+            label = 1
+            ha += 1
+        elif labels in [u'喜好']:
+            label = 2
+            li += 1
+        elif labels in [u'惊讶']:
+            label = 3
+            su += 1
+        elif labels in [u'厌恶']:
+            label = 4
+            di += 1
+        elif labels in [u'恐惧']:
+            label = 5
+            fe += 1
+        elif labels in [u'愤怒']:
+            label = 6
+            an += 1
+        elif labels in [u'悲伤']:
+            label = 7
+            sa += 1
+        elif labels in [u'无', 'D', '']:
+            label = 0
+            no += 1
         else:
+            print num
+            print labels
             print "error: not find a label"
             return
-        '''
+
         for s in c:
             if s.text:
                 weibo.append(s.text)
         str_weibo = ' '.join(weibo)
         fo.write('%s %d\n' % (str_weibo.encode('utf-8'), label))
         weibo = []
-        '''
-    print h_label, l_label, su_label, d_label, f_label, a_label, s_label, n_label
-    # fo.close()
+
+    print ha, li, su, di, fe, an, sa, no
+    fo.close()
 
 
 def main():
@@ -678,8 +694,8 @@ if __name__ == '__main__':
     # get_emotion_word()
     # process_weibo_deep()
     # make_training_data()
-    # make_testing_data()
+    make_testing_data()
     # process_txt()
-    process_xml()
+    # process_xml()
     # re_segment_words()
     # re_segment_train_test_data()

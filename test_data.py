@@ -181,15 +181,8 @@ def load_test_data(filename):
     label = []
     for line in f.readlines():
         line = line.strip().decode('utf-8').split()
-        t_label = int(line[-1])
-        if t_label == 1:
-            continue
-        elif t_label == 2:
-            label.append(1)
-        else:
-            label.append(0)
+        label.append(int(line[-1]))
         test.append(line[:-1])
-
     print len(test)
     print len(label)
     # return test, label
@@ -321,6 +314,7 @@ def main():
     return vocabulary_size, data, ts, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
 
 if __name__ == "__main__":
-    main()
+    # main()
     # load_data()
-    # load_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
+    load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
+    load_test_data('./NLPCC/test_data_nlpcc14_weibo.txt')
