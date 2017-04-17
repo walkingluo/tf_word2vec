@@ -422,41 +422,52 @@ def process_txt():
 
 
 def process_xml():
-    fo = open('./NLPCC/train_set_nlpcc13.txt', 'w')
-    tree = ET.parse('./NLPCC/raw_data/nlpcc13_train.xml')
+    # fo = open('./NLPCC/train_set_nlpcc13.txt', 'w')
+    tree = ET.parse('./NLPCC/raw_data/nlpcc14_train.xml')
     root = tree.getroot()
     weibo = []
     pos = ['happiness', 'like', 'surprise']
     neg = ['disgust', 'fear', 'anger', 'sadness']
     neu = ['none']
-    for c in root:
-        labels = c.attrib['emotion-type']
+    h_label = 0
+    l_label = 0
+    su_label = 0
+    d_label = 0
+    f_label = 0
+    a_label = 0
+    s_label = 0
+    n_label = 0
+    for c in root[:10000]:
+        labels = c.attrib['emotion-type1']
         if labels in ['happiness']:
-            label = 1
+            h_label += 1
         elif labels in ['like']:
-            label = 2
+            l_label += 1
         elif labels in ['surprise']:
-            label = 3
+            su_label += 1
         elif labels in ['disgust']:
-            label = 4
+            d_label += 1
         elif labels in ['fear']:
-            label = 5
+            f_label += 1
         elif labels in ['anger']:
-            label = 6
+            a_label += 1
         elif labels in ['sadness']:
-            label = 7
+            s_label += 1
         elif labels in ['none']:
-            label = 0
+            n_label += 1
         else:
             print "error: not find a label"
             return
+        '''
         for s in c:
             if s.text:
                 weibo.append(s.text)
         str_weibo = ' '.join(weibo)
         fo.write('%s %d\n' % (str_weibo.encode('utf-8'), label))
         weibo = []
-    fo.close()
+        '''
+    print h_label, l_label, su_label, d_label, f_label, a_label, s_label, n_label
+    # fo.close()
 
 
 def main():
@@ -669,6 +680,6 @@ if __name__ == '__main__':
     # make_training_data()
     # make_testing_data()
     # process_txt()
-    # process_xml()
+    process_xml()
     # re_segment_words()
-    re_segment_train_test_data()
+    # re_segment_train_test_data()

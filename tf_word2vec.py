@@ -307,7 +307,7 @@ with graph.as_default():
         learning_rate = 0.2
         lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.005)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
-        # optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
+        # optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))

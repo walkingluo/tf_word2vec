@@ -15,6 +15,7 @@ import numpy as np
 import collections
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
+np.random.seed(1337)
 
 '''
 embeddings_index = {}
@@ -81,7 +82,7 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 test, test_label = load_train_test_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
@@ -264,12 +265,12 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
-'''
+
 model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
           batch_size=16, callbacks=[history])
-'''
-del model
-model = load_model('my_model_13.h5')
+
+# del model
+# model = load_model('my_model_14.h5')
 score = model.evaluate(X_test, y_test)
 
 y_p = model.predict_classes(X_test)
