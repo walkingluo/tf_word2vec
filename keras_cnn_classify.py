@@ -4,8 +4,8 @@ from __future__ import division
 from keras.utils.np_utils import to_categorical
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Conv1D, GlobalMaxPooling1D
-from keras.layers import Dropout, Dense, Activation, SpatialDropout1D
+from keras.layers import Conv1D, GlobalMaxPooling1D, Conv2D, MaxPooling2D, Flatten, Convolution2D
+from keras.layers import Dropout, Dense, Activation, SpatialDropout1D, Merge, Reshape
 from keras.layers import Embedding
 from keras.callbacks import Callback
 from keras import regularizers
@@ -78,8 +78,8 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/1/train_data_nlpcc14_weibo.txt')
-test, test_label = load_train_test_data('./NLPCC/1/test_data_nlpcc14_weibo.txt')
+train, train_label = load_train_test_data('./NLPCC/1/train_data_nlpcc13_weibo.txt')
+test, test_label = load_train_test_data('./NLPCC/1/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
@@ -263,19 +263,19 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 history = LossHistory()
 ma_f_max = 0
 for i in range(1):
-    '''
-    model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=1,
+
+    model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
               batch_size=16, callbacks=[history])
-    '''
-    del model
-    model = load_model('my_model_14.h5')
+
+    # del model
+    # model = load_model('my_model_14.h5')
     score = model.evaluate(X_test, y_test)
 
     y_p = model.predict_classes(X_test)
     test_label = np.array(test_label)
     print
-    print test_label[:20]
-    print y_p[:20]
+    print test_label[:30]
+    print y_p[:30]
     acc = accuracy_score(test_label, y_p)
     # weighted_f1 = f1_score(test_label, y_p, average='weighted')
     macro_precision = precision_score(test_label, y_p, average='macro')
