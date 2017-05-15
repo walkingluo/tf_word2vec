@@ -4,7 +4,7 @@ from __future__ import division
 from keras.utils.np_utils import to_categorical
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Conv1D, GlobalMaxPooling1D, Conv2D, MaxPooling2D, Flatten, Convolution2D
+from keras.layers import Conv1D, GlobalMaxPooling1D, Conv2D, MaxPooling2D, Flatten
 from keras.layers import Dropout, Dense, Activation, SpatialDropout1D, Merge, Reshape
 from keras.layers import Embedding
 from keras.callbacks import Callback
@@ -67,7 +67,22 @@ def load_4_classify_data(filename):
     return train, label
 
 
-def load_train_test_data(filename):
+def subjective_classify(filename):
+    f = open(filename, 'r')
+    train = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        if int(line[-1]) == 0:
+            train.append(line[:-1])
+            label.append(0)
+        else:
+            train.append(line[:-1])
+            label.append(1)
+    return train, label
+
+
+def load_train_data(filename):
     f = open(filename, 'r')
     test = []
     label = []
@@ -78,15 +93,36 @@ def load_train_test_data(filename):
             test.append(line[:-1])
     return test, label
 
-train, train_label = load_train_test_data('./NLPCC/1/train_data_nlpcc13_weibo.txt')
-test, test_label = load_train_test_data('./NLPCC/1/test_data_nlpcc13_weibo.txt')
+
+def load_test_data(filename):
+    f = open(filename, 'r')
+    f_s = open('./subjective_weibo.txt', 'r')
+    subjective_w = []
+    test = []
+    label = []
+    num = 0
+    for line in f_s.readlines():
+        subjective_w.append(int(line.strip()))
+    for line in f.readlines():
+        if num in subjective_w:
+            line = line.strip().decode('utf-8').split()
+            label.append((int(line[-1]) - 1 + 8) % 8)
+            test.append(line[:-1])
+        num += 1
+    return test, label
+
+
+train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13_weibo_new.txt')
+test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
+# train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13_weibo_new.txt')
+# test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=7)
-categorical_test_label = to_categorical(test_label, num_classes=7)
+categorical_train_label = to_categorical(train_label, num_classes=2)
+categorical_test_label = to_categorical(test_label, num_classes=2)
 
 
 def read_vec(filename):
@@ -180,28 +216,48 @@ class LossHistory(Callback):
     def on_batch_end(self, batch, logs={}):
         self.losses.append(logs.get('loss'))
 
+embedding_layer = Embedding(vocabulary_size,
+                            embedding_dim,
+                            weights=[embeddings],
+                            trainable=False,
+                            input_length=max_weibo_length)
+embedding_layer_1 = Embedding(vocabulary_size,
+                              embedding_dim,
+                              weights=[embeddings],
+                              trainable=True,
+                              input_length=max_weibo_length)
+
+model_1 = Sequential()
+'''
+model.add(Embedding(vocabulary_size,
+                    embedding_dim,
+                    input_length=max_weibo_length))
+'''
+model_1.add(embedding_layer)
+'''
+model_1.add(SpatialDropout1D(0.35))
+model_1.add(Conv1D(128, 3, activation='relu'))
+model_1.add(GlobalMaxPooling1D())
+'''
+model_2 = Sequential()
+model_2.add(embedding_layer_1)
+'''
+model_2.add(SpatialDropout1D(0.35))
+model_2.add(Conv1D(128, 3, activation='relu'))
+model_2.add(GlobalMaxPooling1D())
+'''
+
+merged = Merge([model_1, model_2], mode='concat', concat_axis=-1)
 model = Sequential()
-'''
-model.add(Embedding(vocabulary_size,
-                    embedding_dim,
-                    input_length=max_weibo_length))
-'''
-model.add(Embedding(vocabulary_size,
-                    embedding_dim,
-                    weights=[embeddings],
-                    trainable=False,
-                    input_length=max_weibo_length))
-
-model.add(SpatialDropout1D(0.3))
-
-model.add(Conv1D(256, 3, padding='valid', activation='relu', strides=1))
-model.add(GlobalMaxPooling1D())
-
-model.add(Dense(256))
+model.add(merged)
+model.add(Reshape((2, max_weibo_length, embedding_dim)))
+model.add(Conv2D(128, 5, activation='relu', border_mode='valid', data_format='channels_first'))
+model.add(MaxPooling2D(data_format='channels_first', pool_size=(2, 2)))
+model.add(Flatten())
+model.add(Dense(128))
 model.add(Dropout(0.2))
 model.add(Activation('relu'))
-
-model.add(Dense(7))
+model.add(Dense(2))
 model.add(Activation('softmax'))
 
 
@@ -263,15 +319,14 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 history = LossHistory()
 ma_f_max = 0
 for i in range(1):
-
-    model.fit(X_train, y_train, validation_data=(X_valid, y_vaild), epochs=7,
+    model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
               batch_size=16, callbacks=[history])
 
     # del model
-    # model = load_model('my_model_14.h5')
-    score = model.evaluate(X_test, y_test)
+    # model = load_model('my_model_13.h5')
+    score = model.evaluate([X_test, X_test], y_test)
 
-    y_p = model.predict_classes(X_test)
+    y_p = model.predict_classes([X_test, X_test])
     test_label = np.array(test_label)
     print
     print test_label[:30]
@@ -298,6 +353,27 @@ for i in range(1):
     print "Test loss: ", score[0]
     print "Test accuracy: ", score[1]
 
+    sys_cor = dict()
+    for i in range(2):
+        sys_cor[i] = 0
+    for x, y in zip(y_p, test_label):
+        if x == y:
+            sys_cor[x] += 1
+    print sys_cor[1], sum(y_p), sum(test_label)
+    preci = sys_cor[1] / sum(y_p)
+    recal = sys_cor[1] / sum(test_label)
+    f1 = 2 * preci * recal / (preci + recal)
+    print 'f1: ', f1  # 0.7600
+
+    '''
+    file = './subjective_weibo.txt'
+    f = open(file, 'w')
+    for i, k in enumerate(list(y_p)):
+        if k == 1:
+            f.write('%d\n' % i)
+    f.close()
+    '''
+    '''
     system_correct = dict()
     for i in range(7):
         system_correct[i] = 0
@@ -332,6 +408,7 @@ for i in range(1):
     mi_r = sum_sys_cor / sum_gold
     mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
     print 'mi_f: ', mi_f
+'''
 '''
     if ma_f > ma_f_max:
         model.save('my_model_13.h5')

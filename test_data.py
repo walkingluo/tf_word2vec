@@ -177,15 +177,23 @@ def load_data():
 
 def load_test_data(filename):
     f = open(filename, 'r')
+    f_s = open('./subjective_weibo.txt', 'r')
+    subjective_w = []
     test = []
     label = []
+    num = 0
+    none_num = 0
+    for line in f_s.readlines():
+        subjective_w.append(int(line.strip()))
     for line in f.readlines():
-        line = line.strip().decode('utf-8').split()
-        label.append(int(line[-1]))
-        test.append(line[:-1])
-    print len(test)
-    print len(label)
-    # return test, label
+        if num in subjective_w:
+            line = line.strip().decode('utf-8').split()
+            if int(line[-1]) == 0:
+                none_num += 1
+            label.append(int(line[-1]) - 1)
+            test.append(line[:-1])
+        num += 1
+    return test, label, none_num
 
 
 def main():
@@ -316,5 +324,6 @@ def main():
 if __name__ == "__main__":
     # main()
     # load_data()
-    load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
-    load_test_data('./NLPCC/test_data_nlpcc14_weibo.txt')
+    # load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
+    test, label, none_num = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
+    print len(test), len(label), none_num
