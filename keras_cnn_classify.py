@@ -137,7 +137,7 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l_700m.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l_700m_new.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -216,46 +216,37 @@ class LossHistory(Callback):
     def on_batch_end(self, batch, logs={}):
         self.losses.append(logs.get('loss'))
 
-embedding_layer = Embedding(vocabulary_size,
-                            embedding_dim,
-                            weights=[embeddings],
-                            trainable=False,
-                            input_length=max_weibo_length)
-embedding_layer_1 = Embedding(vocabulary_size,
-                              embedding_dim,
-                              weights=[embeddings],
-                              trainable=True,
-                              input_length=max_weibo_length)
+embedding_layer_static = Embedding(vocabulary_size,
+                                   embedding_dim,
+                                   weights=[embeddings],
+                                   trainable=False,
+                                   input_length=max_weibo_length)
+embedding_layer_non_static = Embedding(vocabulary_size,
+                                       embedding_dim,
+                                       weights=[embeddings],
+                                       trainable=True,
+                                       input_length=max_weibo_length)
+embedding_layer_rand = Embedding(vocabulary_size,
+                                 embedding_dim,
+                                 input_length=max_weibo_length)
 
 model_1 = Sequential()
-'''
-model.add(Embedding(vocabulary_size,
-                    embedding_dim,
-                    input_length=max_weibo_length))
-'''
-model_1.add(embedding_layer)
-'''
-model_1.add(SpatialDropout1D(0.35))
-model_1.add(Conv1D(128, 3, activation='relu'))
+model_1.add(embedding_layer_static)
+model_1.add(SpatialDropout1D(0.3))
+model_1.add(Conv1D(128, 4, activation='relu', padding='same'))
 model_1.add(GlobalMaxPooling1D())
-'''
+
 model_2 = Sequential()
-model_2.add(embedding_layer_1)
-'''
-model_2.add(SpatialDropout1D(0.35))
-model_2.add(Conv1D(128, 3, activation='relu'))
+model_2.add(embedding_layer_non_static)
+model_2.add(SpatialDropout1D(0.3))
+model_2.add(Conv1D(128, 3, activation='relu', padding='same'))
 model_2.add(GlobalMaxPooling1D())
-'''
 
 merged = Merge([model_1, model_2], mode='concat', concat_axis=-1)
 model = Sequential()
 model.add(merged)
-model.add(Reshape((2, max_weibo_length, embedding_dim)))
-model.add(Conv2D(128, 5, activation='relu', border_mode='valid', data_format='channels_first'))
-model.add(MaxPooling2D(data_format='channels_first', pool_size=(2, 2)))
-model.add(Flatten())
 model.add(Dense(128))
-model.add(Dropout(0.2))
+model.add(Dropout(0.5))
 model.add(Activation('relu'))
 model.add(Dense(2))
 model.add(Activation('softmax'))
@@ -319,7 +310,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 history = LossHistory()
 ma_f_max = 0
 for i in range(1):
-    model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
+    model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=2,
               batch_size=16, callbacks=[history])
 
     # del model
@@ -364,7 +355,6 @@ for i in range(1):
     recal = sys_cor[1] / sum(test_label)
     f1 = 2 * preci * recal / (preci + recal)
     print 'f1: ', f1  # 0.7600
-
     '''
     file = './subjective_weibo.txt'
     f = open(file, 'w')

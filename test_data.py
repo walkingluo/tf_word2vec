@@ -24,9 +24,9 @@ def read_weibo():
     fn = open('./weibo_emotion/clean_train_data_neg.txt', 'rb')
     weibo_pos = []
     weibo_neg = []
-    for line in fp.readlines()[:3500000]:
+    for line in fp.readlines()[:100000]:
         weibo_pos.append(line.decode('utf-8').split())
-    for line in fn.readlines()[:3500000]:
+    for line in fn.readlines()[:100000]:
         weibo_neg.append(line.decode('utf-8').split())
     fp.close()
     fn.close()
@@ -99,7 +99,6 @@ def get_word_lexicon():
     return words_sent_lexicon
 
 vocabulary_size = 200000
-min_count = 5
 
 
 def build_dataset(words):
@@ -107,9 +106,7 @@ def build_dataset(words):
     count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
     dictionary = dict()
     for word, n in count:
-        # if n > min_count:
         dictionary[word] = len(dictionary)
-    # count = count[:len(dictionary)]
     data = list()
     unk_count = 0
     for word in words:
@@ -196,13 +193,42 @@ def load_test_data(filename):
     return test, label, none_num
 
 
+def get_batch(weibo_id, batch_size, skip_window):
+    global data_index
+    weibo = weibo_id[data_index:data_index+batch_size]
+    data_index = data_index+batch_size
+    size = 0
+    sum = 0
+    for i in range(1, skip_window+1):
+        sum += i
+    for i in range(batch_size):
+        weibo_len = len(weibo[i])
+        size += weibo_len * skip_window * 2 - 2 * sum
+    batch = np.ndarray(shape=(size), dtype=np.int32)
+    label = np.ndarray(shape=(size, 1), dtype=np.int32)
+    num = 0
+    for i in range(batch_size):
+        weibo_len = len(weibo[i])
+        for j in range(weibo_len):
+            for z in range(1, skip_window+1):
+                if j-z >= 0:
+                    batch[num] = weibo[i][j]
+                    label[num, 0] = weibo[i][j-z]
+                    num += 1
+                if j+z < weibo_len:
+                    batch[num] = weibo[i][j]
+                    label[num, 0] = weibo[i][j+z]
+                    num += 1
+    return batch, label
+
+
 def main():
     # tweets, tweets_sent, tweets_topic = read_tweet('/home/jiangluo/tf_word2vec/tweets.txt')
     # tweets = tweets[:10000]
     # tweets_sent = tweets_sent[:10000]
     # print(len(tweets))
     # print tweets[0], tweets_sent[0], tweets_topic[0]
-    num = 3500000
+    num = 100000
     weibo_pos, weibo_neg = read_weibo()
     # weibo_pos = random.sample(weibo_pos, len(weibo_neg))
     print len(weibo_pos), len(weibo_neg)
@@ -227,26 +253,21 @@ def main():
     # random.shuffle(weibo)
     # del weibo_pos
     # del weibo_neg
+    '''
     index = np.arange(len(weibo))
     np.random.shuffle(index)
     weibo = np.array(weibo)
     weibo = weibo[index]
-
     weibo_sent = num * [0]
     weibo_sent.extend(num * [1])
     print len(weibo_sent)
     weibo_sent = np.array(weibo_sent)
     weibo_sent = weibo_sent[index]
-    '''
-    top = np.array(top)
-    top = top[index]
-    '''
     # print weibo_sent[:10], weibo_sent[-10:-1]
+    '''
+    '''
     ts = set_words_sentiment(weibo, weibo_sent)
     print len(ts)
-    '''
-    tp = set_words_topic(weibo, top)
-    print len(tp)
     '''
     words = tweets_to_wordlist(weibo)
     print(len(words))
@@ -255,44 +276,37 @@ def main():
     # set_words_sentment_in_lexicon(words, neg_words, pos_words)
     # words_sent_lexicon = get_word_lexicon()
     # print len(words_sent_lexicon)
-    # print words_sent_lexicon[:10]
-    del weibo
-    del weibo_sent
-    # del top
-    del index
+    # print words_sent_lexicon[:10]4
     data, count, dictionary, reverse_dictionary = build_dataset(words)
     print 'data len: ', len(data)
     print 'count len: ', len(count)
-    print count[:10]
-    print 'dictionary len: ', len(dictionary)
-    vocabulary_size = len(count)
+    # print count[:10]
+    # print 'dictionary len: ', len(dictionary)
+    word_id = []
+    weibo_id = []
+    for i in weibo:
+        for w in i:
+            try:
+                word_id.append(dictionary[w])
+            except Exception, e:
+                word_id.append(0)
+        weibo_id.append(word_id)
+        word_id = []
+    batch, label = get_batch(weibo_id, batch_size=8, skip_window=4)
     vocab_counts = []
     for _, n in count:
         vocab_counts.append(n)
     # print vocab_counts[:10]
+    '''
     del words
     del dictionary
     del count
-    '''
-    words_dict = dict()
-    for w, n in count:
-        words_dict[w] = n
-    '''
     f_neu = open('./dict/neu_words.txt', 'r')
     neu_words = []
     for w in f_neu.readlines():
         neu_words.append(w.strip().decode('utf-8'))
     print len(neu_words)
     f_neu.close()
-    '''
-    count_num = 0
-    for w in cn_words:
-        try:
-            count_num += words_dict[w]
-        except Exception, e:
-            continue
-    print count_num
-    '''
     fp = open('./dict/pos_words.txt', 'r')
     fn = open('./dict/neg_words.txt', 'r')
     pos_words = []
@@ -304,6 +318,7 @@ def main():
     fp.close()
     fn.close()
     print len(pos_words), len(neg_words)
+    '''
     # print len(dictionary)
     # print(len(data))   # 22386665
     # print('Most common words (+UNK)', count[:10])
@@ -319,11 +334,12 @@ def main():
     # print batch
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
-    return vocabulary_size, data, ts, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
+    return weibo_id, vocab_counts, reverse_dictionary
 
 if __name__ == "__main__":
-    # main()
+    main()
+    # get_batch()
     # load_data()
     # load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
-    test, label, none_num = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
-    print len(test), len(label), none_num
+    # test, label, none_num = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
+    # print len(test), len(label), none_num
