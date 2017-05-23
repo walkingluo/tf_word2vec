@@ -1,21 +1,12 @@
 import tensorflow as tf
 import numpy as np
-
-b = 0
-
-
-def f():
-    global b
-    b = 1
-
+a = [1, 3, 4, 2, 3, 4]
 graph = tf.Graph()
 with graph.as_default():
-    a = tf.Variable(0, dtype=tf.int32, trainable=True)
-    c = tf.placeholder(dtype=tf.int32)
-    ass = tf.assign(a, c)
     embeddings = tf.Variable(
-        tf.random_uniform([20, 5], -1.0, 1.0))
-    embed = tf.nn.embedding_lookup(embeddings, [1, 3, 4])
+        tf.random_uniform([5, 5], -1.0, 1.0))
+    embed = tf.nn.embedding_lookup(embeddings, a)
+    input_t = tf.reshape(embed, [2, 15])
 
     sent_w = tf.Variable(
         tf.truncated_normal([2, 5],
@@ -30,14 +21,10 @@ with graph.as_default():
 
 with tf.Session(graph=graph) as sess:
     tf.global_variables_initializer().run()
-    f()
-    print embed.get_shape(), sent_w.get_shape()
-    print sent_logits.get_shape()
-    print sent_logits.eval()
-    print sig.eval()
-    print reduce.eval()
-    ass = sess.run([ass], feed_dict={c: b})
-    print ass
+    print embed.get_shape()
+    print embeddings.eval()
+    print embed.eval()
+    print input_t.eval()
     '''
     print sent_softmax.get_shape()
     print sent_softmax.eval()

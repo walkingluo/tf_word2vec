@@ -8,13 +8,13 @@ from keras.layers import Conv1D, GlobalMaxPooling1D, Conv2D, MaxPooling2D, Flatt
 from keras.layers import Dropout, Dense, Activation, SpatialDropout1D, Merge, Reshape
 from keras.layers import Embedding
 from keras.callbacks import Callback
-from keras import regularizers
 from keras.models import load_model
 import keras.backend as K
 import numpy as np
 import collections
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
+from sklearn.model_selection import StratifiedKFold
 np.random.seed(1337)
 
 '''
@@ -112,8 +112,8 @@ def load_test_data(filename):
     return test, label
 
 
-train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13_weibo_new.txt')
-test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
+train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
+test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13_weibo_new.txt')
 # test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
@@ -137,7 +137,7 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec_weibo_s_l_700m_new.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -181,8 +181,6 @@ print count
 '''
 
 train_num = int(len(train_id) * 0.95)
-# vaild_num = train_num + int(len(test_id) * 0.1)
-# print train_num, vaild_num
 max_weibo_length = 140
 
 X_train = train_id[:train_num]
@@ -229,141 +227,110 @@ embedding_layer_non_static = Embedding(vocabulary_size,
 embedding_layer_rand = Embedding(vocabulary_size,
                                  embedding_dim,
                                  input_length=max_weibo_length)
+drop_rate = 0.3
 
 model_1 = Sequential()
-model_1.add(embedding_layer_static)
-model_1.add(SpatialDropout1D(0.3))
-model_1.add(Conv1D(128, 4, activation='relu', padding='same'))
+model_1.add(embedding_layer_non_static)
+model_1.add(SpatialDropout1D(drop_rate))
+model_1.add(Conv1D(100, 3, activation='relu', padding='same'))
 model_1.add(GlobalMaxPooling1D())
+
+model_1_s = Sequential()
+model_1_s.add(embedding_layer_static)
+model_1_s.add(SpatialDropout1D(drop_rate))
+model_1_s.add(Conv1D(100, 3, activation='relu', padding='same'))
+model_1_s.add(GlobalMaxPooling1D())
 
 model_2 = Sequential()
 model_2.add(embedding_layer_non_static)
-model_2.add(SpatialDropout1D(0.3))
-model_2.add(Conv1D(128, 3, activation='relu', padding='same'))
+model_2.add(SpatialDropout1D(drop_rate))
+model_2.add(Conv1D(100, 4, activation='relu', padding='same'))
 model_2.add(GlobalMaxPooling1D())
 
-merged = Merge([model_1, model_2], mode='concat', concat_axis=-1)
+model_2_s = Sequential()
+model_2_s.add(embedding_layer_static)
+model_2_s.add(SpatialDropout1D(drop_rate))
+model_2_s.add(Conv1D(100, 4, activation='relu', padding='same'))
+model_2_s.add(GlobalMaxPooling1D())
+
+model_3 = Sequential()
+model_3.add(embedding_layer_non_static)
+model_3.add(SpatialDropout1D(drop_rate))
+model_3.add(Conv1D(100, 5, activation='relu', padding='same'))
+model_3.add(GlobalMaxPooling1D())
+
+model_3_s = Sequential()
+model_3_s.add(embedding_layer_static)
+model_3_s.add(SpatialDropout1D(drop_rate))
+model_3_s.add(Conv1D(100, 5, activation='relu', padding='same'))
+model_3_s.add(GlobalMaxPooling1D())
+
+merged = Merge([model_1, model_2, model_3, model_1_s, model_2_s, model_3_s], mode='concat', concat_axis=-1)
 model = Sequential()
 model.add(merged)
-model.add(Dense(128))
+model.add(Dense(100))
 model.add(Dropout(0.5))
 model.add(Activation('relu'))
 model.add(Dense(2))
 model.add(Activation('softmax'))
-
-
-def precision(y_true, y_pred):
-    """Precision metric.
-    Only computes a batch-wise average of precision.
-    Computes the precision, a metric for multi-label classification of
-    how many selected items are relevant.
-    """
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-    precision = true_positives / (predicted_positives + K.epsilon())
-    return precision
-
-
-def recall(y_true, y_pred):
-    """Recall metric.
-    Only computes a batch-wise average of recall.
-    Computes the recall, a metric for multi-label classification of
-    how many relevant items are selected.
-    """
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-    recall = true_positives / (possible_positives + K.epsilon())
-    return recall
-
-
-def fbeta_score(y_true, y_pred, beta=1):
-    """Computes the F score.
-    The F score is the weighted harmonic mean of precision and recall.
-    Here it is only computed as a batch-wise average, not globally.
-    This is useful for multi-label classification, where input samples can be
-    classified as sets of labels. By only using accuracy (precision) a model
-    would achieve a perfect score by simply assigning every class to every
-    input. In order to avoid this, a metric should penalize incorrect class
-    assignments as well (recall). The F-beta score (ranged from 0.0 to 1.0)
-    computes this, as a weighted mean of the proportion of correct class
-    assignments vs. the proportion of incorrect class assignments.
-    With beta = 1, this is equivalent to a F-measure. With beta < 1, assigning
-    correct classes becomes more important, and with beta > 1 the metric is
-    instead weighted towards penalizing incorrect class assignments.
-    """
-    if beta < 0:
-        raise ValueError('The lowest choosable beta is zero (only precision).')
-
-    # If there are no true positives, fix the F score at 0 like sklearn.
-    if K.sum(K.round(K.clip(y_true, 0, 1))) == 0:
-        return 0
-
-    p = precision(y_true, y_pred)
-    r = recall(y_true, y_pred)
-    bb = beta ** 2
-    fbeta_score = (1 + bb) * (p * r) / (bb * p + r + K.epsilon())
-    return fbeta_score
 
 model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 history = LossHistory()
 ma_f_max = 0
-for i in range(1):
-    model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=2,
-              batch_size=16, callbacks=[history])
+model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
+          batch_size=54, callbacks=[history])
 
-    # del model
-    # model = load_model('my_model_13.h5')
-    score = model.evaluate([X_test, X_test], y_test)
+# del model
+# model = load_model('my_model_13.h5')
+# score = model.evaluate([X_test, X_test], y_test)
 
-    y_p = model.predict_classes([X_test, X_test])
-    test_label = np.array(test_label)
-    print
-    print test_label[:30]
-    print y_p[:30]
-    acc = accuracy_score(test_label, y_p)
-    # weighted_f1 = f1_score(test_label, y_p, average='weighted')
-    macro_precision = precision_score(test_label, y_p, average='macro')
-    macro_recall = recall_score(test_label, y_p, average='macro')
-    macro_f1 = f1_score(test_label, y_p, average='macro')
-    micro_precision = precision_score(test_label, y_p, average='micro')
-    micro_recall = recall_score(test_label, y_p, average='micro')
-    micro_f1 = f1_score(test_label, y_p, average='micro')
-    print 'Acc: ', acc
-    # print 'Weighted F1: ', weighted_f1
-    print 'Macro precision: ', macro_precision
-    print 'Macro recall: ', macro_recall
-    print 'Macro F1: ', macro_f1
-    print 'Micro precision: ', micro_precision
-    print 'Micro recall: ', micro_recall
-    print 'Micro F1: ', micro_f1
+y_p = model.predict_classes([X_test, X_test])
+test_label = np.array(test_label)
+'''
+acc = accuracy_score(test_label, y_p)
+# weighted_f1 = f1_score(test_label, y_p, average='weighted')
+macro_precision = precision_score(test_label, y_p, average='macro')
+macro_recall = recall_score(test_label, y_p, average='macro')
+macro_f1 = f1_score(test_label, y_p, average='macro')
+micro_precision = precision_score(test_label, y_p, average='micro')
+micro_recall = recall_score(test_label, y_p, average='micro')
+micro_f1 = f1_score(test_label, y_p, average='micro')
+print 'Acc: ', acc
+# print 'Weighted F1: ', weighted_f1
+print 'Macro precision: ', macro_precision
+print 'Macro recall: ', macro_recall
+print 'Macro F1: ', macro_f1
+print 'Micro precision: ', micro_precision
+print 'Micro recall: ', micro_recall
+print 'Micro F1: ', micro_f1
 
-    print model.metrics_names
-    print score
-    print "Test loss: ", score[0]
-    print "Test accuracy: ", score[1]
-
-    sys_cor = dict()
-    for i in range(2):
-        sys_cor[i] = 0
-    for x, y in zip(y_p, test_label):
-        if x == y:
-            sys_cor[x] += 1
-    print sys_cor[1], sum(y_p), sum(test_label)
-    preci = sys_cor[1] / sum(y_p)
-    recal = sys_cor[1] / sum(test_label)
-    f1 = 2 * preci * recal / (preci + recal)
-    print 'f1: ', f1  # 0.7600
-    '''
+print model.metrics_names
+print score
+print "Test loss: ", score[0]
+print "Test accuracy: ", score[1]
+'''
+sys_cor = dict()
+for i in range(2):
+    sys_cor[i] = 0
+for x, y in zip(y_p, test_label):
+    if x == y:
+        sys_cor[x] += 1
+print sys_cor[1], sum(y_p), sum(test_label)
+preci = sys_cor[1] / sum(y_p)
+recal = sys_cor[1] / sum(test_label)
+f1 = 2 * preci * recal / (preci + recal)
+print 'f1: ', f1  # 0.7600
+'''
     file = './subjective_weibo.txt'
     f = open(file, 'w')
     for i, k in enumerate(list(y_p)):
         if k == 1:
             f.write('%d\n' % i)
     f.close()
-    '''
-    '''
+'''
+'''
     system_correct = dict()
     for i in range(7):
         system_correct[i] = 0

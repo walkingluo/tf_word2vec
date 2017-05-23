@@ -105,41 +105,77 @@ del words  # Hint to reduce memory.
 # print('Most common words (+UNK)', count[:5])
 # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 '''
-weibo_id, vocab_counts, reverse_dictionary = main()
+vocabulary_size, weibo_id, weibo_sent, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words = main()
 
 # print len(data)
-vocabulary_size = 200000
+# vocabulary_size = 200000
 data_index = 0
-word_dict = dict()
+# word_dict = dict()
 
 
 def get_batch(batch_size, skip_window):
     global data_index
     weibo = weibo_id[data_index:data_index+batch_size]
-    data_index = data_index+batch_size
+    weibo_s = weibo_sent[data_index:data_index+batch_size]
+    data_index = (data_index+batch_size) % len(weibo_id)
     size = 0
     sum = 0
+    num_l = 0
+    word_l = []
+    label_d = []
+    num_l = 0
     for i in range(1, skip_window+1):
         sum += i
-    for i in range(len(weibo)):
+    for i in range(batch_size):
         weibo_len = len(weibo[i])
         size += weibo_len * skip_window * 2 - 2 * sum
-    batch = np.ndarray(shape=(size), dtype=np.int32)
-    label = np.ndarray(shape=(size, 1), dtype=np.int32)
+        for w in weibo[i]:
+            if reverse_dictionary[w] in neu_words:
+                word_l.append(w)
+                label_d.append(1)
+                num_l += 1
+            elif reverse_dictionary[w] in neg_words:
+                word_l.append(w)
+                label_d.append(0)
+                num_l += 1
+            elif reverse_dictionary[w] in pos_words:
+                word_l.append(w)
+                label_d.append(2)
+                num_l += 1
+            else:
+                continue
+    batch_w = np.ndarray(shape=(size), dtype=np.int32)
+    label_w = np.ndarray(shape=(size, 1), dtype=np.int32)
+    batch_l = np.ndarray(shape=(num_l), dtype=np.int32)
+    label_l = np.ndarray(shape=(num_l, 1), dtype=np.int32)
+    batch_t = np.ndarray(shape=(batch_size, 50), dtype=np.int32)
+    label_t = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+
     num = 0
-    for i in range(len(weibo)):
+    for i in range(batch_size):
         weibo_len = len(weibo[i])
         for j in range(weibo_len):
             for z in range(1, skip_window+1):
                 if j-z >= 0:
-                    batch[num] = weibo[i][j]
-                    label[num, 0] = weibo[i][j-z]
+                    batch_w[num] = weibo[i][j]
+                    label_w[num, 0] = weibo[i][j-z]
                     num += 1
                 if j+z < weibo_len:
-                    batch[num] = weibo[i][j]
-                    label[num, 0] = weibo[i][j+z]
+                    batch_w[num] = weibo[i][j]
+                    label_w[num, 0] = weibo[i][j+z]
                     num += 1
-    return batch, label
+    for i in range(num_l):
+        batch_l[i] = word_l[i]
+        label_l[i] = label_d[i]
+    for i in range(batch_size):
+        weibo_len = len(weibo[i])
+        for j in range(50):
+            if j < weibo_len:
+                batch_t[i, j] = weibo[i][j]
+            else:
+                batch_t[i, j] = -1
+        label_t[i, 0] = weibo_s[i]
+    return batch_w, label_w, batch_l, label_l, batch_t, label_t
 
 
 # Function to generate a training batch for the skip-gram model.
@@ -209,9 +245,9 @@ for i in range(8):
     print(batch[i], reverse_dictionary[batch[i]],
           '->', labels[i, 0], reverse_dictionary[labels[i, 0]])
 '''
-batch_size = 4
+batch_size = 16
 embedding_size = 100  # Dimension of the embedding vector.
-skip_window = 4       # How many words to consider left and right.
+skip_window = 10       # How many words to consider left and right.
 num_skips = 8         # How many times to reuse an input to generate a label.
 
 valid_size = 16     # Random set of words to evaluate similarity on.
@@ -227,10 +263,12 @@ graph = tf.Graph()
 with graph.as_default():
     with tf.name_scope('input'):
         # Input data.
-        train_inputs = tf.placeholder(tf.int32)
-        train_labels = tf.placeholder(tf.int32)
-        # sent_labels = tf.placeholder(tf.float32, shape=[input_size, 1])
-        # lexicon_labels = tf.placeholder(tf.int32, shape=[input_size, 1])
+        train_inputs_w = tf.placeholder(tf.int32)
+        train_labels_w = tf.placeholder(tf.int32)
+        train_inputs_l = tf.placeholder(tf.int32)
+        train_labels_l = tf.placeholder(tf.int32)
+        train_inputs_t = tf.placeholder(shape=[batch_size, 50], dtype=tf.int32)
+        train_labels_t = tf.placeholder(shape=[batch_size, 1], dtype=tf.float32)
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
     with tf.name_scope('global_step'):
         global_step = tf.Variable(0, dtype=tf.int32, trainable=False)
@@ -239,7 +277,11 @@ with graph.as_default():
         init_width = 0.5 / embedding_size
         embeddings = tf.Variable(
             tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
-        embed = tf.nn.embedding_lookup(embeddings, train_inputs)
+        embed = tf.nn.embedding_lookup(embeddings, train_inputs_w)
+        embed_l = tf.nn.embedding_lookup(embeddings, train_inputs_l)
+        input_t = tf.reshape(train_inputs_t, shape=[batch_size*50])
+        embed_temp = tf.nn.embedding_lookup(embeddings, input_t)
+        embed_t = tf.reshape(embed_temp, shape=[batch_size, embedding_size*50])
     with tf.name_scope('softmax'):
         # Construct the variables for the softmax loss
         softmax_weights = tf.Variable(
@@ -248,7 +290,7 @@ with graph.as_default():
         softmax_biases = tf.Variable(
             tf.zeros([vocabulary_size]))
     with tf.name_scope('sampled'):
-        lables_matrix = tf.cast(train_labels, tf.int64)
+        lables_matrix = tf.cast(train_labels_w, tf.int64)
         sampled_ids, _, _ = tf.nn.fixed_unigram_candidate_sampler(
             true_classes=lables_matrix,
             num_true=1,
@@ -258,7 +300,7 @@ with graph.as_default():
             distortion=0.75,
             unigrams=vocab_counts)
     with tf.name_scope('true_logits'):
-        labels = tf.reshape(train_labels, [-1])
+        labels = tf.reshape(train_labels_w, [-1])
         true_w = tf.nn.embedding_lookup(softmax_weights, labels)
         true_b = tf.nn.embedding_lookup(softmax_biases, labels)
         true_logits = tf.reduce_sum(tf.multiply(embed, true_w), 1) + true_b
@@ -274,36 +316,32 @@ with graph.as_default():
             labels=tf.zeros_like(sampled_logits), logits=sampled_logits)
 
         loss_w = (tf.reduce_mean(true_xent) + tf.reduce_mean(sampled_xent))
-    '''
-    with tf.name_scope('sentiment_loss'):
-        # weights and biases for sentiment
-        sent_w = tf.Variable(
-            tf.truncated_normal([1, embedding_size],
-                                stddev=1.0 / math.sqrt(embedding_size)))
-        sent_b = tf.Variable(tf.zeros([1]))
-        sent_logits = tf.matmul(embed, sent_w, transpose_b=True) + sent_b
-        sent_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=sent_labels))
     with tf.name_scope('lexicon_loss'):
         # weights and biases for lexicon
         lexicon_w = tf.Variable(
-            tf.truncated_normal([5, embedding_size],
+            tf.truncated_normal([3, embedding_size],
                                 stddev=1.0 / math.sqrt(embedding_size)))
-        lexicon_b = tf.Variable(tf.zeros([5]))
-        lexicon_logits = tf.matmul(embed, lexicon_w, transpose_b=True) + lexicon_b
-        lexicon_label = tf.one_hot(lexicon_labels, 5, dtype=tf.int32)
+        lexicon_b = tf.Variable(tf.zeros([3]))
+        lexicon_logits = tf.matmul(embed_l, lexicon_w, transpose_b=True) + lexicon_b
+        labels_l = tf.one_hot(train_labels_l, 3, dtype=tf.int32)
         lexicon_loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=lexicon_logits, labels=lexicon_label))
-    '''
+            tf.nn.softmax_cross_entropy_with_logits(logits=lexicon_logits, labels=labels_l))
+    with tf.name_scope('sentiment_loss'):
+        # weights and biases for sentiment
+        sent_w = tf.Variable(
+            tf.truncated_normal([1, embedding_size*50],
+                                stddev=1.0 / math.sqrt(embedding_size)))
+        sent_b = tf.Variable(tf.zeros([1]))
+        sent_logits = tf.matmul(embed_t, sent_w, transpose_b=True) + sent_b
+        sent_loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=train_labels_t))
     with tf.name_scope('loss'):
-        '''
-        alpha = 0.3
-        loss = (1 - alpha*2) * loss_w + alpha * sent_loss + alpha * lexicon_loss
-        '''
-        loss = loss_w
+        a = 0.7
+        b = 0.8
+        loss = b * (a * loss_w + (1 - a) * lexicon_loss) + (1 - b) * sent_loss
     with tf.name_scope('optimizer'):
-        learning_rate = 0.2
-        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.005)
+        learning_rate = 0.025
+        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.004)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
         # optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
@@ -327,11 +365,11 @@ with tf.Session(graph=graph) as session:
     saver = tf.train.Saver()
     print("Initialized")
 
-    ckpt = tf.train.get_checkpoint_state('./checkpoints_1/')
+    ckpt = tf.train.get_checkpoint_state('./checkpoints_2/')
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(session, ckpt.model_checkpoint_path)
     init_step = session.run(global_step)
-    writer = tf.summary.FileWriter('./improved_graph_1/lr' + str(0.2), session.graph)
+    writer = tf.summary.FileWriter('./improved_graph_2/lr' + str(0.2), session.graph)
     average_loss = 0
     min_loss = 100
     for step in xrange(init_step, num_steps):
@@ -341,8 +379,9 @@ with tf.Session(graph=graph) as session:
         feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels, sent_labels: batch_sent,
                      lexicon_labels: batch_lexicon}
         '''
-        batch_inputs, batch_labels = get_batch(batch_size, skip_window)
-        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
+        batch_w, label_w, batch_l, label_l, batch_t, label_t = get_batch(batch_size, skip_window)
+        feed_dict = {train_inputs_w: batch_w, train_labels_w: label_w, train_inputs_l: batch_l, train_labels_l: label_l,
+                     train_inputs_t: batch_t, train_labels_t: label_t}
         # We perform one update step by evaluating the optimizer op (including it
         # in the list of returned values for session.run()
         _, loss_val, lr_1, summary = session.run([optimizer, loss, lr, all_summary], feed_dict=feed_dict)
@@ -352,8 +391,8 @@ with tf.Session(graph=graph) as session:
             average_loss /= 2000
             # The average loss is an estimate of the loss over the last 2000 batches.
             print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1)
-            saver.save(session, './checkpoints_1/skip-gram', step+1)
-            if step > 15 and average_loss < min_loss:
+            saver.save(session, './checkpoints_2/skip-gram', step+1)
+            if step > 20000 and average_loss < min_loss:
                 final_embeddings = normalized_embeddings.eval()
                 print('saving vector')
                 save_vec(filename, final_embeddings, reverse_dictionary)
@@ -375,12 +414,11 @@ with tf.Session(graph=graph) as session:
 
 print(data_index)
 
-'''
+
 print('saving final vector')
-filename_final = 'vec_weibo_s_l_700m_new_final.txt'
+filename_final = 'wordvec_final.txt'
 save_vec(filename_final, final_embeddings, reverse_dictionary)
 print 'done'
-'''
 
 
 def plot_with_labels(low_dim_embs, labels, filename='tsne_text8.png'):

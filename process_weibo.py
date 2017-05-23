@@ -16,22 +16,21 @@ punc = punc.decode("utf-8")
 punc_en = " \"$#@%&'()*+,-./:;<=>[\]^_`{|}~·...._"
 punc_en = punc_en.decode('utf-8')
 
-emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[来]', u'[good]', u'[haha]',
-               u'[ok]', u'[拳头]', u'[赞]', u'[耶]', u'[微笑]', u'[色]', u'[可爱]', u'[嘻嘻]',
-               u'[爱你]', u'[心]', u'[鼓掌]', u'[馋嘴]', u'[抱抱_旧]', u'[发红包]', u'[礼物]', u'[害羞]',
-               u'[玫瑰]', u'[威武]', u'[得意地笑]', u'[太阳]', u'[哆啦A梦微笑]', u'[冒个泡]', u'[狂笑]',
-               u'[飞个吻]', u'[抱抱]', u'[蛋糕]', u'[兔子]', u'[喵喵]', u'[笑哈哈]', u'[花心]', u'[偷笑]',
-               u'[偷乐]', u'[推荐]', u'[音乐]', u'[羊年大吉]', u'[噢耶]', u'[微风]', u'[月亮]', u'[话筒]',
-               u'[好喜欢]', u'[好棒]', u'[羞嗒嗒]', u'[给力]', u'[江南style]', u'[鲜花]', u'[好爱哦]',
-               u'[好得意]', u'[熊猫]', u'[爱心传递]', u'[哇哈哈]', u'[握手]', u'[做鬼脸]', u'[萌]',
+emotoin_pos = [u'[挤眼]', u'[亲亲]', u'[太开心]', u'[哈哈]', u'[酷]', u'[good]', u'[haha]',
+               u'[ok]', u'[拳头]', u'[赞]', u'[耶]', u'[微笑]', u'[可爱]', u'[嘻嘻]',
+               u'[爱你]', u'[心]', u'[鼓掌]', u'[馋嘴]', u'[抱抱_旧]', u'[发红包]', u'[礼物]',
+               u'[玫瑰]', u'[威武]', u'[得意地笑]', u'[太阳]', u'[哆啦A梦微笑]',
+               u'[飞个吻]', u'[抱抱]', u'[蛋糕]', u'[兔子]', u'[笑哈哈]', u'[偷笑]',
+               u'[偷乐]', u'[推荐]', u'[音乐]', u'[噢耶]',
+               u'[好喜欢]', u'[好棒]', u'[给力]', u'[鲜花]', u'[好爱哦]',
+               u'[好得意]', u'[爱心传递]', u'[哇哈哈]', u'[握手]', u'[做鬼脸]', u'[萌]',
                u'[礼花]', u'[帅]']
-emotoin_neg = [u'[生病]', u'[失望]', u'[黑线]', u'[吐]', u'[委屈]', u'[悲伤', u'[衰]', u'[愤怒]',
-               u'[感冒]', u'[最差]', u'[NO]', u'[怒骂]', u'[困]', u'[哈欠]', u'[打脸]', u'[笑cry]',
-               u'[汗]', u'[泪]', u'[晕]', u'[抓狂]', u'[怒]', u'[doge]', u'[蜡烛]', u'[弱]', u'[睡觉]',
-               u'[崩溃]', u'[拜拜]', u'[打哈气]', u'[泪流满面]', u'[哼]', u'[草泥马]', u'[挖鼻]', u'[鄙视]',
-               u'[阴险]', u'[可怜]', u'[最右]', u'[挖鼻屎]', u'[悲伤]', u'[疑问]', u'[思考]', u'[浮云]',
-               u'[伤心]', u'[囧]', u'[呵呵]', u'[吃惊]', u'[抠鼻屎]', u'[bobo抓狂]', u'[闭嘴]', u'[懒得理你]',
-               u'[嘘]', u'[围观]']
+emotoin_neg = [u'[生病]', u'[失望]', u'[黑线]', u'[吐]', u'[委屈]', u'[衰]', u'[愤怒]',
+               u'[感冒]', u'[最差]', u'[NO]', u'[怒骂]', u'[打脸]',
+               u'[泪]', u'[晕]', u'[抓狂]', u'[怒]', u'[蜡烛]', u'[弱]',
+               u'[崩溃]', u'[泪流满面]', u'[哼]', u'[草泥马]', u'[鄙视]',
+               u'[阴险]', u'[可怜]', u'[悲伤]', u'[浮云]',
+               u'[伤心]', u'[囧]', u'[bobo抓狂]', u'[闭嘴]', u'[懒得理你]']
 emotoin_neu = [u'[a]', u'[b]', u'[c]', u'[d]', u'[e]', u'[f]', u'[g]',
                u'[h]', u'[i]', u'[j]', u'[k]', u'[l]', u'[m]', u'[n]',
                u'[o]', u'[p]', u'[q]', u'[r]', u'[s]', u'[t]',
@@ -102,26 +101,27 @@ def read_file():
 
 def preprocess_weibo(text):
     # ^[\u4E00-\u9FFF]+$ match all chinese
-
+    '''
     emotion_re = re.compile(u'\[([\u4E00-\u9FFFA-Za-z0-9]+)\]')
     text_re = re.sub(emotion_re, '', text)
-
+    '''
     hashtags_re = re.compile(u'@[\u4E00-\u9FFFA-Za-z0-9]+')
-    text_re = re.sub(hashtags_re, '', text_re)
-
+    text_re = re.sub(hashtags_re, 'UNAME', text)
+    '''
     riyu_re = re.compile(u'[\u3040-\u3210\u00c0-\u2e40\uA000-\uFFFF\U00010000-\U0001ffff._]+')
     text_re = re.sub(riyu_re, '', text_re)
-
+    '''
+    '''
     huifu_re = re.compile(u'回复|转发')
     text_re = re.sub(huifu_re, '', text_re)
 
     handles_re = re.compile(u'#[\u4E00-\u9FFFA-Za-z0-9 ]+#')
     text_re = re.sub(handles_re, '', text_re)
-
+    '''
     url_re = re.compile(r'[a-zA-z]+://[a-zA-Z0-9\./]+')
-    text_re = re.sub(url_re, '', text_re)
-
-    repeat_re = re.compile(r'([!?a-z])\1{1,}', re.IGNORECASE)
+    text_re = re.sub(url_re, 'URL', text_re)
+    '''
+    repeat_re = re.compile(r'([!?])\1{1,}', re.IGNORECASE)
 
     def rpt_repl(match):
         return match.group(1)
@@ -129,8 +129,68 @@ def preprocess_weibo(text):
 
     reg_eng = re.compile(u'[a-zA-Z0-9@#]+')
     text_re = re.sub(reg_eng, '', text_re)
-
+    '''
     return text_re
+
+
+def get_train():
+    jieba.load_userdict('./dict/dd_dict.txt')
+    f = open('./weibo_emotion/week1.csv', 'r')
+    weibo = []
+    sent = []
+    f.readline()
+    for line in f.readlines():
+        try:
+            line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            line = line.lower()
+            line = preprocess_weibo(line)
+            seg_list = jieba.lcut(line)
+            for i, w in enumerate(seg_list):
+                if w == u'UNAME':
+                    seg_list[i] = u'<UNAME>'
+                if w == u'URL':
+                    seg_list[i] = u'<URL>'
+                if i <= len(seg_list)-3 and seg_list[i] == u'[' and seg_list[i+2] == u']':
+                    seg_list[i+1] = u'[' + seg_list[i+1] + u']'
+            seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
+            line = ' '.join(seg_list)
+            pos_num = 0
+            neg_num = 0
+            emotion = re.findall("(\[.*?\])", line)
+            for e in emotion:
+                if e in emotoin_pos:
+                    pos_num += 1
+                if e in emotoin_neg:
+                    neg_num += 1
+            if pos_num > neg_num:
+                sent.append(2)
+            elif pos_num < neg_num:
+                sent.append(0)
+            else:
+                sent.append(1)
+            weibo.append(line)
+            print len(weibo)
+        except Exception as e:
+            print e
+
+    fo = open('./weibo_emotion/week1_s.txt', 'w')
+    for line, s in zip(weibo, sent):
+        fo.write('%s %d\n' % (line.encode('utf-8'), s))
+
+    f.close()
+    fo.close()
+
+
+def tongji():
+    f = open('./weibo_emotion/week1_t.txt', 'r')
+    num = 0
+    word = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        print len(line)
+        word.extend(line)
+    word = set(word)
+    print len(word)
 
 
 def find_emotion(infile, outfile):
@@ -140,8 +200,8 @@ def find_emotion(infile, outfile):
     f.readline()
     for line in f.readlines():
         try:
-            # line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
-            line = HanziConv.toSimplified(line.strip().decode('utf-8'))
+            line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            # line = HanziConv.toSimplified(line.strip().decode('utf-8'))
             line = line.lower()
             weibo.append(line)
             print len(weibo)
@@ -361,15 +421,22 @@ def make_testing_data():
     # fp = open('./NLPCC/clean_pos.txt', 'r')
     # ft = open('./NLPCC/clean_test.txt', 'r')
     # fc = open('./NLPCC/emotion_test_set.txt', 'r')
-    f_nlp13 = open('./NLPCC/1/test_set_nlpcc13_new.txt', 'r')
-    fo = open('./NLPCC/1/test_data_nlpcc13_weibo_old_1.txt', 'w')
-    jieba.load_userdict('./dict/dict_.txt')
-    for line in f_nlp13.readlines():
+    fi = open('./NLPCC/1/test_set_nlpcc13.txt', 'r')
+    fo = open('./NLPCC/1/test_data_nlpcc13.txt', 'w')
+    jieba.load_userdict('./dict/dd_dict.txt')
+    for line in fi.readlines():
         line = line.strip().decode('utf-8').split(' ')
         weibo = ' '.join(line[:-1])
         weibo = HanziConv.toSimplified(weibo)
         weibo = preprocess_weibo(weibo)
         seg_list = jieba.lcut(weibo)
+        for i, w in enumerate(seg_list):
+            if w == u'UNAME':
+                seg_list[i] = u'<UNAME>'
+            if w == u'URL':
+                seg_list[i] = u'<URL>'
+            if i <= len(seg_list)-3 and seg_list[i] == u'[' and seg_list[i+2] == u']':
+                seg_list[i+1] = u'[' + seg_list[i+1] + u']'
         seg_list = [w for w in seg_list if w not in punc and w not in punc_en and w not in [u'\u3000']]
         if seg_list:
             weibo = ' '.join(seg_list)
@@ -387,7 +454,7 @@ def make_testing_data():
     '''
 
     # fp.close()
-    f_nlp13.close()
+    fi.close()
     fo.close()
 
 
@@ -694,8 +761,10 @@ if __name__ == '__main__':
     # get_emotion_word()
     # process_weibo_deep()
     # make_training_data()
-    make_testing_data()
+    # make_testing_data()
     # process_txt()
     # process_xml()
     # re_segment_words()
     # re_segment_train_test_data()
+    get_train()
+    # tongji()
