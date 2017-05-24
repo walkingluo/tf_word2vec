@@ -112,17 +112,17 @@ def load_test_data(filename):
     return test, label
 
 
-train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
-test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
-# train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13_weibo_new.txt')
-# test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
+# train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
+# test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
+train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13.txt')
+test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=2)
-categorical_test_label = to_categorical(test_label, num_classes=2)
+categorical_train_label = to_categorical(train_label, num_classes=7)
+categorical_test_label = to_categorical(test_label, num_classes=8)
 
 
 def read_vec(filename):
@@ -271,7 +271,7 @@ model.add(merged)
 model.add(Dense(100))
 model.add(Dropout(0.5))
 model.add(Activation('relu'))
-model.add(Dense(2))
+model.add(Dense(7))
 model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='adam',
@@ -279,7 +279,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 
 history = LossHistory()
 ma_f_max = 0
-model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
+model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=6,
           batch_size=54, callbacks=[history])
 
 # del model
@@ -311,6 +311,7 @@ print score
 print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
 '''
+'''
 sys_cor = dict()
 for i in range(2):
     sys_cor[i] = 0
@@ -322,50 +323,50 @@ preci = sys_cor[1] / sum(y_p)
 recal = sys_cor[1] / sum(test_label)
 f1 = 2 * preci * recal / (preci + recal)
 print 'f1: ', f1  # 0.7600
-'''
-    file = './subjective_weibo.txt'
-    f = open(file, 'w')
-    for i, k in enumerate(list(y_p)):
-        if k == 1:
-            f.write('%d\n' % i)
-    f.close()
-'''
-'''
-    system_correct = dict()
-    for i in range(7):
-        system_correct[i] = 0
 
-    for x, y in zip(y_p, test_label):
-        if x == y:
-            system_correct[x] += 1
-
-    print system_correct.keys()
-    print system_correct.values()
-    system_proposed = collections.Counter(y_p)
-    print system_proposed
-    gold = collections.Counter(test_label)
-    print gold
-    sum_p = 0
-    sum_r = 0
-    sum_sys_cor = 0
-    sum_sys_pro = 0
-    sum_gold = 0
-    for i in range(7):
-        sum_p += system_correct[i] / (system_proposed[i] + K.epsilon())
-        sum_r += system_correct[i] / gold[i]
-        sum_sys_cor += system_correct[i]
-        sum_sys_pro += system_proposed[i]
-        sum_gold += gold[i]
-
-    ma_p = sum_p / 7
-    ma_r = sum_r / 7
-    ma_f = 2 * ma_p * ma_r / (ma_p + ma_r)
-    print 'ma_f: ', ma_f
-    mi_p = sum_sys_cor / sum_sys_pro
-    mi_r = sum_sys_cor / sum_gold
-    mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
-    print 'mi_f: ', mi_f
+file = './subjective_weibo.txt'
+f = open(file, 'w')
+for i, k in enumerate(list(y_p)):
+    if k == 1:
+        f.write('%d\n' % i)
+f.close()
 '''
+
+system_correct = dict()
+for i in range(7):
+    system_correct[i] = 0
+
+for x, y in zip(y_p, test_label):
+    if x == y:
+        system_correct[y] += 1
+
+print system_correct.keys()
+print system_correct.values()
+system_proposed = collections.Counter(y_p)
+print system_proposed
+gold = collections.Counter(test_label)
+print gold
+sum_p = 0
+sum_r = 0
+sum_sys_cor = 0
+sum_sys_pro = 0
+sum_gold = 0
+for i in range(7):
+    sum_p += system_correct[i] / (system_proposed[i] + K.epsilon())
+    sum_r += system_correct[i] / gold[i]
+    sum_sys_cor += system_correct[i]
+    sum_sys_pro += system_proposed[i]
+    sum_gold += gold[i]
+
+ma_p = sum_p / 7
+ma_r = sum_r / 7
+ma_f = 2 * ma_p * ma_r / (ma_p + ma_r)
+print 'ma_f: ', ma_f
+mi_p = sum_sys_cor / sum_sys_pro
+mi_r = sum_sys_cor / sum_gold
+mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
+print 'mi_f: ', mi_f
+
 '''
     if ma_f > ma_f_max:
         model.save('my_model_13.h5')

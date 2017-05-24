@@ -110,6 +110,7 @@ vocabulary_size, weibo_id, weibo_sent, vocab_counts, reverse_dictionary, neu_wor
 # print len(data)
 # vocabulary_size = 200000
 data_index = 0
+max_length = 80
 # word_dict = dict()
 
 
@@ -119,16 +120,18 @@ def get_batch(batch_size, skip_window):
     weibo_s = weibo_sent[data_index:data_index+batch_size]
     data_index = (data_index+batch_size) % len(weibo_id)
     size = 0
-    sum = 0
-    num_l = 0
     word_l = []
     label_d = []
     num_l = 0
-    for i in range(1, skip_window+1):
-        sum += i
     for i in range(batch_size):
         weibo_len = len(weibo[i])
-        size += weibo_len * skip_window * 2 - 2 * sum
+        length = 0
+        begin = 1
+        if skip_window+1-weibo_len > 1:
+            begin = skip_window+1-weibo_len
+        for l in range(begin, skip_window+1):
+            length += l
+        size += weibo_len * skip_window * 2 - 2 * length
         for w in weibo[i]:
             if reverse_dictionary[w] in neu_words:
                 word_l.append(w)
@@ -144,13 +147,16 @@ def get_batch(batch_size, skip_window):
                 num_l += 1
             else:
                 continue
+    if num_l == 0:
+        num_l = 1
+        word_l.append(0)
+        label_d.append(1)
     batch_w = np.ndarray(shape=(size), dtype=np.int32)
     label_w = np.ndarray(shape=(size, 1), dtype=np.int32)
     batch_l = np.ndarray(shape=(num_l), dtype=np.int32)
     label_l = np.ndarray(shape=(num_l, 1), dtype=np.int32)
-    batch_t = np.ndarray(shape=(batch_size, 50), dtype=np.int32)
+    batch_t = np.ndarray(shape=(batch_size, max_length), dtype=np.int32)
     label_t = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-
     num = 0
     for i in range(batch_size):
         weibo_len = len(weibo[i])
@@ -169,7 +175,7 @@ def get_batch(batch_size, skip_window):
         label_l[i] = label_d[i]
     for i in range(batch_size):
         weibo_len = len(weibo[i])
-        for j in range(50):
+        for j in range(max_length):
             if j < weibo_len:
                 batch_t[i, j] = weibo[i][j]
             else:
@@ -245,9 +251,9 @@ for i in range(8):
     print(batch[i], reverse_dictionary[batch[i]],
           '->', labels[i, 0], reverse_dictionary[labels[i, 0]])
 '''
-batch_size = 16
+batch_size = 32
 embedding_size = 100  # Dimension of the embedding vector.
-skip_window = 10       # How many words to consider left and right.
+skip_window = 10      # How many words to consider left and right.
 num_skips = 8         # How many times to reuse an input to generate a label.
 
 valid_size = 16     # Random set of words to evaluate similarity on.
@@ -267,8 +273,8 @@ with graph.as_default():
         train_labels_w = tf.placeholder(tf.int32)
         train_inputs_l = tf.placeholder(tf.int32)
         train_labels_l = tf.placeholder(tf.int32)
-        train_inputs_t = tf.placeholder(shape=[batch_size, 50], dtype=tf.int32)
-        train_labels_t = tf.placeholder(shape=[batch_size, 1], dtype=tf.float32)
+        train_inputs_t = tf.placeholder(shape=[batch_size, max_length], dtype=tf.int32)
+        train_labels_t = tf.placeholder(shape=[batch_size, 1], dtype=tf.int32)
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
     with tf.name_scope('global_step'):
         global_step = tf.Variable(0, dtype=tf.int32, trainable=False)
@@ -279,9 +285,9 @@ with graph.as_default():
             tf.random_uniform([vocabulary_size, embedding_size], -init_width, init_width))
         embed = tf.nn.embedding_lookup(embeddings, train_inputs_w)
         embed_l = tf.nn.embedding_lookup(embeddings, train_inputs_l)
-        input_t = tf.reshape(train_inputs_t, shape=[batch_size*50])
+        input_t = tf.reshape(train_inputs_t, shape=[batch_size*max_length])
         embed_temp = tf.nn.embedding_lookup(embeddings, input_t)
-        embed_t = tf.reshape(embed_temp, shape=[batch_size, embedding_size*50])
+        embed_t = tf.reshape(embed_temp, shape=[batch_size, embedding_size*max_length])
     with tf.name_scope('softmax'):
         # Construct the variables for the softmax loss
         softmax_weights = tf.Variable(
@@ -329,12 +335,13 @@ with graph.as_default():
     with tf.name_scope('sentiment_loss'):
         # weights and biases for sentiment
         sent_w = tf.Variable(
-            tf.truncated_normal([1, embedding_size*50],
+            tf.truncated_normal([3, embedding_size*max_length],
                                 stddev=1.0 / math.sqrt(embedding_size)))
-        sent_b = tf.Variable(tf.zeros([1]))
+        sent_b = tf.Variable(tf.zeros([3]))
         sent_logits = tf.matmul(embed_t, sent_w, transpose_b=True) + sent_b
+        labels_t = tf.one_hot(train_labels_t, 3, dtype=tf.int32)
         sent_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=sent_logits, labels=train_labels_t))
+            tf.nn.softmax_cross_entropy_with_logits(logits=sent_logits, labels=labels_t))
     with tf.name_scope('loss'):
         a = 0.7
         b = 0.8
@@ -387,12 +394,12 @@ with tf.Session(graph=graph) as session:
         _, loss_val, lr_1, summary = session.run([optimizer, loss, lr, all_summary], feed_dict=feed_dict)
         average_loss += loss_val
         writer.add_summary(summary, global_step=step+1)
-        if (step + 1) % 2000 == 0:
-            average_loss /= 2000
+        if (step + 1) % 1000 == 0:
+            average_loss /= 200
             # The average loss is an estimate of the loss over the last 2000 batches.
             print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1)
             saver.save(session, './checkpoints_2/skip-gram', step+1)
-            if step > 20000 and average_loss < min_loss:
+            if step > 100000 and average_loss < min_loss:
                 final_embeddings = normalized_embeddings.eval()
                 print('saving vector')
                 save_vec(filename, final_embeddings, reverse_dictionary)
@@ -400,7 +407,7 @@ with tf.Session(graph=graph) as session:
             average_loss = 0
 
         # Note that this is expensive (~20% slowdown if computed every 500 steps)
-        if (step + 1) % 10000 == 0:
+        if (step + 1) % 5000 == 0:
             sim = similarity.eval()
             for i in xrange(valid_size):
                 valid_word = reverse_dictionary[valid_examples[i]]

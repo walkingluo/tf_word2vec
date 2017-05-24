@@ -9,9 +9,10 @@ def read_tweet(filename):
     fp = open(filename, 'rb')
     tweets = []
     tweets_sent = []
-    for line in fp.readlines():
-        tweets.append(line.decode('utf-8').split()[:-1])
-        tweets_sent.append(int(line.split()[-1]))
+    for line in fp.readlines()[:200000]:
+        if len(line.decode('utf-8').split()[:-1]) != 0:
+            tweets.append(line.decode('utf-8').split()[:-1])
+            tweets_sent.append(int(line.split()[-1]))
     return tweets, tweets_sent
 
 
@@ -189,23 +190,27 @@ def load_test_data(filename):
         num += 1
     return test, label, none_num
 
+max_length = 80
+
 
 def get_batch(weibo_id, weibo_sent, batch_size, skip_window, reverse_dictionary, neu_words, pos_words, neg_words):
     global data_index
     weibo = weibo_id[data_index:data_index+batch_size]
     weibo_s = weibo_sent[data_index:data_index+batch_size]
-    data_index = data_index+batch_size
+    data_index = (data_index+batch_size) % len(weibo_id)
     size = 0
-    sum = 0
-    num_l = 0
     word_l = []
     label_d = []
     num_l = 0
-    for i in range(1, skip_window+1):
-        sum += i
     for i in range(batch_size):
         weibo_len = len(weibo[i])
-        size += weibo_len * skip_window * 2 - 2 * sum
+        length = 0
+        begin = 1
+        if skip_window+1-weibo_len > 1:
+            begin = skip_window+1-weibo_len
+        for l in range(begin, skip_window+1):
+            length += l
+        size += weibo_len * skip_window * 2 - 2 * length
         for w in weibo[i]:
             if reverse_dictionary[w] in neu_words:
                 word_l.append(w)
@@ -225,9 +230,8 @@ def get_batch(weibo_id, weibo_sent, batch_size, skip_window, reverse_dictionary,
     label_w = np.ndarray(shape=(size, 1), dtype=np.int32)
     batch_l = np.ndarray(shape=(num_l), dtype=np.int32)
     label_l = np.ndarray(shape=(num_l, 1), dtype=np.int32)
-    batch_t = np.ndarray(shape=(batch_size, 50), dtype=np.int32)
+    batch_t = np.ndarray(shape=(batch_size, max_length), dtype=np.int32)
     label_t = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-
     num = 0
     for i in range(batch_size):
         weibo_len = len(weibo[i])
@@ -246,7 +250,7 @@ def get_batch(weibo_id, weibo_sent, batch_size, skip_window, reverse_dictionary,
         label_l[i] = label_d[i]
     for i in range(batch_size):
         weibo_len = len(weibo[i])
-        for j in range(50):
+        for j in range(max_length):
             if j < weibo_len:
                 batch_t[i, j] = weibo[i][j]
             else:
@@ -261,6 +265,9 @@ def main():
     print len(weibo), len(weibo_sent)
     print weibo[0], weibo_sent[0]
     # print tweets[0], tweets_sent[0], tweets_topic[0]
+    for wei in weibo:
+        if len(wei) == 0:
+            print 'error'
     '''
     num = 100000
     weibo_pos, weibo_neg = read_weibo()
@@ -331,7 +338,7 @@ def main():
         word_id = []
 
     vocab_counts = []
-    for _, n in count:
+    for _, n in count[:len(dictionary)]:
         vocab_counts.append(n)
     # print vocab_counts[:10]
     del words
@@ -355,7 +362,7 @@ def main():
     fn.close()
     print len(pos_words), len(neg_words)
     '''
-    batch, label, batch_l, label_l, batch_t, label_t = get_batch(weibo_id, weibo_sent, batch_size=8, skip_window=4,
+    batch, label, batch_l, label_l, batch_t, label_t = get_batch(weibo_id, weibo_sent, batch_size=16, skip_window=10,
                                                                  reverse_dictionary=reverse_dictionary,
                                                                  neu_words=neu_words, pos_words=pos_words, neg_words=neg_words)
     print batch[:10], label[:10]
