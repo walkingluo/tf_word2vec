@@ -112,17 +112,17 @@ def load_test_data(filename):
     return test, label
 
 
-# train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
-# test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
-train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13.txt')
-test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13.txt')
+train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
+test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
+# train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13.txt')
+# test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_pos_neg_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 # train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=7)
-categorical_test_label = to_categorical(test_label, num_classes=8)
+categorical_train_label = to_categorical(train_label, num_classes=2)
+categorical_test_label = to_categorical(test_label, num_classes=2)
 
 
 def read_vec(filename):
@@ -137,10 +137,11 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('vec.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('wordvec_final.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
+embeddings = np.round(embeddings, 6)
 print len(words)
 
 
@@ -271,7 +272,7 @@ model.add(merged)
 model.add(Dense(100))
 model.add(Dropout(0.5))
 model.add(Activation('relu'))
-model.add(Dense(7))
+model.add(Dense(2))
 model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='adam',
@@ -279,7 +280,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 
 history = LossHistory()
 ma_f_max = 0
-model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=6,
+model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=2,
           batch_size=54, callbacks=[history])
 
 # del model
@@ -311,7 +312,7 @@ print score
 print "Test loss: ", score[0]
 print "Test accuracy: ", score[1]
 '''
-'''
+
 sys_cor = dict()
 for i in range(2):
     sys_cor[i] = 0
@@ -323,7 +324,7 @@ preci = sys_cor[1] / sum(y_p)
 recal = sys_cor[1] / sum(test_label)
 f1 = 2 * preci * recal / (preci + recal)
 print 'f1: ', f1  # 0.7600
-
+'''
 file = './subjective_weibo.txt'
 f = open(file, 'w')
 for i, k in enumerate(list(y_p)):
@@ -331,7 +332,7 @@ for i, k in enumerate(list(y_p)):
         f.write('%d\n' % i)
 f.close()
 '''
-
+'''
 system_correct = dict()
 for i in range(7):
     system_correct[i] = 0
@@ -366,7 +367,7 @@ mi_p = sum_sys_cor / sum_sys_pro
 mi_r = sum_sys_cor / sum_gold
 mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
 print 'mi_f: ', mi_f
-
+'''
 '''
     if ma_f > ma_f_max:
         model.save('my_model_13.h5')

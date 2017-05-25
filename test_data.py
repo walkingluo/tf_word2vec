@@ -9,7 +9,7 @@ def read_tweet(filename):
     fp = open(filename, 'rb')
     tweets = []
     tweets_sent = []
-    for line in fp.readlines()[:200000]:
+    for line in fp.readlines()[:1000000]:
         if len(line.decode('utf-8').split()[:-1]) != 0:
             tweets.append(line.decode('utf-8').split()[:-1])
             tweets_sent.append(int(line.split()[-1]))
@@ -386,8 +386,19 @@ def main():
     # return tweets, tweets_sent, dictionary, reverse_dictionary
     return vocabulary_size, weibo_id, weibo_sent, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
 
+
+def save_train_data():
+    weibo, weibo_sent = read_tweet('./weibo_emotion/week1_s.txt')
+    print len(weibo)
+    f = open('./weibo_emotion/week1_train.txt', 'w')
+    for w in weibo:
+        line = ' '.join(w)
+        f.write('%s\n' % line.encode('utf-8'))
+    f.close()
+
 if __name__ == "__main__":
-    main()
+    # main()
+    save_train_data()
     # get_batch()
     # load_data()
     # load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')

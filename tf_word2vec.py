@@ -116,6 +116,8 @@ max_length = 80
 
 def get_batch(batch_size, skip_window):
     global data_index
+    if data_index+batch_size > len(weibo_id):
+        data_index = len(weibo_id)-batch_size
     weibo = weibo_id[data_index:data_index+batch_size]
     weibo_s = weibo_sent[data_index:data_index+batch_size]
     data_index = (data_index+batch_size) % len(weibo_id)
@@ -179,7 +181,7 @@ def get_batch(batch_size, skip_window):
             if j < weibo_len:
                 batch_t[i, j] = weibo[i][j]
             else:
-                batch_t[i, j] = -1
+                batch_t[i, j] = 0
         label_t[i, 0] = weibo_s[i]
     return batch_w, label_w, batch_l, label_l, batch_t, label_t
 
@@ -259,9 +261,9 @@ num_skips = 8         # How many times to reuse an input to generate a label.
 valid_size = 16     # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
 valid_examples = np.random.choice(valid_window, valid_size, replace=False)
-num_sampled = 128    # Number of negative examples to sample.
+num_sampled = 64    # Number of negative examples to sample.
 
-num_steps = int(len(weibo_id) / batch_size)
+num_steps = int(len(weibo_id) / batch_size) * 10
 print num_steps
 
 graph = tf.Graph()
@@ -303,7 +305,7 @@ with graph.as_default():
             num_sampled=num_sampled,
             unique=True,
             range_max=vocabulary_size,
-            distortion=0.75,
+            distortion=0.9,
             unigrams=vocab_counts)
     with tf.name_scope('true_logits'):
         labels = tf.reshape(train_labels_w, [-1])
@@ -343,14 +345,14 @@ with graph.as_default():
         sent_loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(logits=sent_logits, labels=labels_t))
     with tf.name_scope('loss'):
-        a = 0.7
+        a = 0.5
         b = 0.8
         loss = b * (a * loss_w + (1 - a) * lexicon_loss) + (1 - b) * sent_loss
     with tf.name_scope('optimizer'):
         learning_rate = 0.025
-        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.004)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
-        # optimizer = tf.train.RMSPropOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
+        lr = tf.train.exponential_decay(learning_rate, global_step, num_steps, 0.0004)
+        # optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
+        optimizer = tf.train.AdagradOptimizer(learning_rate=lr).minimize(loss, global_step=global_step)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -372,11 +374,12 @@ with tf.Session(graph=graph) as session:
     saver = tf.train.Saver()
     print("Initialized")
 
-    ckpt = tf.train.get_checkpoint_state('./checkpoints_2/')
+    ckpt = tf.train.get_checkpoint_state('./checkpoints/')
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(session, ckpt.model_checkpoint_path)
     init_step = session.run(global_step)
-    writer = tf.summary.FileWriter('./improved_graph_2/lr' + str(0.2), session.graph)
+    data_index = init_step * batch_size
+    writer = tf.summary.FileWriter('./improved_graph/lr' + str(0.025), session.graph)
     average_loss = 0
     min_loss = 100
     for step in xrange(init_step, num_steps):
@@ -395,10 +398,10 @@ with tf.Session(graph=graph) as session:
         average_loss += loss_val
         writer.add_summary(summary, global_step=step+1)
         if (step + 1) % 1000 == 0:
-            average_loss /= 200
+            average_loss /= 1000
             # The average loss is an estimate of the loss over the last 2000 batches.
             print("Average loss at step ", step+1, ": ", average_loss, ":", lr_1)
-            saver.save(session, './checkpoints_2/skip-gram', step+1)
+            saver.save(session, './checkpoints/skip-gram', step+1)
             if step > 100000 and average_loss < min_loss:
                 final_embeddings = normalized_embeddings.eval()
                 print('saving vector')
