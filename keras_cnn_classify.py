@@ -137,7 +137,7 @@ def read_vec(filename):
     f.close()
     return vocabulary_size, embedding_dim, embeddings, words
 
-vocabulary_size, embedding_dim, embeddings, words = read_vec('wordvec_final.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
@@ -182,7 +182,7 @@ print count
 '''
 
 train_num = int(len(train_id) * 0.95)
-max_weibo_length = 140
+max_weibo_length = 100
 
 X_train = train_id[:train_num]
 y_train = np.array(categorical_train_label[:train_num])
@@ -266,6 +266,7 @@ model_3_s.add(SpatialDropout1D(drop_rate))
 model_3_s.add(Conv1D(100, 5, activation='relu', padding='same'))
 model_3_s.add(GlobalMaxPooling1D())
 
+# merged = Merge([model_1, model_2, model_3], mode='concat', concat_axis=-1)
 merged = Merge([model_1, model_2, model_3, model_1_s, model_2_s, model_3_s], mode='concat', concat_axis=-1)
 model = Sequential()
 model.add(merged)
@@ -280,13 +281,18 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 
 history = LossHistory()
 ma_f_max = 0
-model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=2,
+'''
+model.fit([X_train], y_train, validation_data=([X_valid], y_vaild), epochs=4,
           batch_size=54, callbacks=[history])
+'''
+model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
+          batch_size=60, callbacks=[history])
 
 # del model
 # model = load_model('my_model_13.h5')
 # score = model.evaluate([X_test, X_test], y_test)
 
+# y_p = model.predict_classes([X_test])
 y_p = model.predict_classes([X_test, X_test])
 test_label = np.array(test_label)
 '''
