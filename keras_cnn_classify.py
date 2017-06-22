@@ -126,10 +126,11 @@ def load_user_weibo(filename, num):
             train.append(w[:-1].split())
             label.append(int(w[-1]))
     return train, label
-
+'''
 train_h, label_h = load_user_weibo('./weibo_emotion/h_weibo.txt', 150)
 train_m, label_m = load_user_weibo('./weibo_emotion/m_weibo.txt', 1000)
 train_l, label_l = load_user_weibo('./weibo_emotion/l_weibo.txt', 10000)
+'''
 '''
 train = []
 label = []
@@ -140,6 +141,7 @@ label.extend(label_h)
 label.extend(label_m)
 label.extend(label_l)
 '''
+'''
 index = np.arange(len(train_l))
 np.random.shuffle(index)
 train = np.array(train_l)
@@ -149,14 +151,15 @@ train_label = train_label[index]
 
 test, test_label = load_user_weibo('./weibo_emotion/test_l.txt', 1000)
 '''
+'''
 num = int(len(train_a) * 0.85)
 train = train_a[:num]
 train_label = label[:num]
 test = train_a[num:]
 test_label = label[num:]
 '''
-# train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
-# test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
+train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
+test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13.txt')
 # test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
@@ -164,8 +167,8 @@ test_label = label[num:]
 # train, train_label = load_4_classify_data('./NLPCC/train_data_nlpcc13_weibo.txt')
 # test, test_label = load_4_classify_data('./NLPCC/test_data_nlpcc13_weibo.txt')
 
-categorical_train_label = to_categorical(train_label, num_classes=3)
-categorical_test_label = to_categorical(test_label, num_classes=3)
+categorical_train_label = to_categorical(train_label, num_classes=2)
+categorical_test_label = to_categorical(test_label, num_classes=2)
 
 
 def read_vec(filename):
@@ -242,7 +245,7 @@ for i in range(len(test_id)):
 emo_list_train = np.array(emo_list_train)
 emo_list_test = np.array(emo_list_test)
 '''
-train_num = int(len(train_id) * 0.90)
+train_num = int(len(train_id) * 0.95)
 max_weibo_length = 100
 '''
 emo_train = emo_list_train[:train_num]
@@ -349,7 +352,7 @@ model.add(merged)
 model.add(Dense(100))
 model.add(Dropout(0.5))
 model.add(Activation('relu'))
-model.add(Dense(3))
+model.add(Dense(2))
 model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='adam',
@@ -364,8 +367,8 @@ model.fit([emo_train, X_train], y_train, validation_data=([emo_valid, X_valid], 
 model.fit([X_train], y_train, validation_data=([X_valid], y_vaild), epochs=4,
           batch_size=60, callbacks=[history])
 '''
-'''
-model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=1,
+
+model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
           batch_size=60, callbacks=[history])
 
 # del model
@@ -375,7 +378,6 @@ score = model.evaluate([X_test, X_test], y_test)
 # y_p = model.predict_classes([emo_list_test, X_test])
 y_p = model.predict_classes([X_test, X_test])
 test_label = np.array(test_label)
-'''
 
 
 def save_result(filename, y_p, label):
@@ -419,7 +421,7 @@ def load_result():
     f_m.close()
     f_h.close()
     return y_p_a, label_a, y_p, label
-y_p_a, label_a, y_p, label = load_result()
+# y_p_a, label_a, y_p, label = load_result()
 
 
 def evaluate_result(y_p, test_label):
@@ -439,14 +441,12 @@ def evaluate_result(y_p, test_label):
     print 'Micro precision: ', micro_precision
     print 'Micro recall: ', micro_recall
     print 'Micro F1: ', micro_f1
-    '''
+
     print model.metrics_names
     print score
     print "Test loss: ", score[0]
     print "Test accuracy: ", score[1]
-    '''
 
-    '''
     sys_cor = dict()
     for i in range(2):
         sys_cor[i] = 0
@@ -459,7 +459,6 @@ def evaluate_result(y_p, test_label):
     f1 = 2 * preci * recal / (preci + recal)
     print 'f1: ', f1  # 0.7600
     '''
-    '''
     file = './subjective_weibo.txt'
     f = open(file, 'w')
     for i, k in enumerate(list(y_p)):
@@ -467,7 +466,7 @@ def evaluate_result(y_p, test_label):
             f.write('%d\n' % i)
     f.close()
     '''
-
+    '''
     system_correct = dict()
     for i in range(3):
         system_correct[i] = 0
@@ -502,11 +501,14 @@ def evaluate_result(y_p, test_label):
     mi_r = sum_sys_cor / sum_gold
     mi_f = 2 * mi_p * mi_r / (mi_p + mi_r)
     print 'mi_f: ', mi_f
-
+    '''
+'''
 print '================ALL==============='
 evaluate_result(y_p_a, label_a)
 print '================NOTALL============'
 evaluate_result(y_p, label)
+'''
+evaluate_result(y_p, test_label)
 '''
     if ma_f > ma_f_max:
         model.save('my_model_13.h5')
