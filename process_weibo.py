@@ -748,6 +748,186 @@ def get_emotion_word():
     fo_p.close()
     fo_n.close()
 
+
+def read_user_weibo():
+    jieba.load_userdict('./dict/dd_dict.txt')
+    f = open('./weibo_emotion/week1.csv', 'r')
+    user_w = dict()
+    num = 0
+    f.readline()
+    for line in f.readlines():
+        num += 1
+        print num
+        try:
+            user = line.strip().split(',')[2].decode('utf-8')
+            line = HanziConv.toSimplified(line.strip().split(',')[6].decode('utf-8'))
+            line = line.lower()
+            line = preprocess_weibo(line)
+            seg_list = jieba.lcut(line)
+            for i, w in enumerate(seg_list):
+                if w == u'UNAME':
+                    seg_list[i] = u'<UNAME>'
+                if w == u'URL':
+                    seg_list[i] = u'<URL>'
+                if i <= len(seg_list)-3 and seg_list[i] == u'[' and seg_list[i+2] == u']':
+                    seg_list[i+1] = u'[' + seg_list[i+1] + u']'
+            seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
+            line = ' '.join(seg_list)
+            pos_num = 0
+            neg_num = 0
+            emotion = re.findall("(\[.*?\])", line)
+            for e in emotion:
+                if e in emotoin_pos:
+                    pos_num += 1
+                if e in emotoin_neg:
+                    neg_num += 1
+            if pos_num > neg_num:
+                sent = 2
+            elif pos_num < neg_num:
+                sent = 0
+            else:
+                sent = 1
+            line = line + ' ' + str(sent)
+            try:
+                user_w[user].append(line)
+            except Exception, e:
+                user_w[user] = []
+                user_w[user].append(line)
+
+        except Exception as e:
+            print e
+
+    fo = open('./weibo_emotion/w1_u.txt', 'w')
+    for k, v in user_w.items():
+        w = ','.join(v)
+        fo.write('%s %s\n' % (k.encode('utf-8'), w.encode('utf-8')))
+
+    f.close()
+    fo.close()
+
+
+def read_user_weibo_statistics():
+    f = open('./weibo_emotion/w1_u.txt', 'r')
+    user_weibo_num = dict()
+    num = 0
+    for line in f.readlines():
+        weibo = line.strip().decode('utf-8').split()[1:]
+        weibo = ' '.join(weibo)
+        weibo = weibo.split(',')
+        s = []
+        for w in weibo:
+            s.append(int(w[-1]))
+        count_s = []
+        for i in range(3):
+            count_s.append(s.count(i))
+        user_weibo_num[num] = [len(weibo)]
+        user_weibo_num[num].extend(count_s)
+        num += 1
+    print len(user_weibo_num)
+    count_user_weibo = []
+    for _, v in user_weibo_num.items():
+        count_user_weibo.append(v[0])
+    result = Counter(count_user_weibo).most_common()
+    print len(result)
+    h_num = 0
+    m_num = 0
+    l_num = 0
+    for r in result:
+        if r[1] <= 5:
+            l_num += 1
+        elif r[1] > 40:
+            h_num += 1
+        else:
+            m_num += 1
+    print l_num, m_num, h_num
+    l = dict.fromkeys([0, 1, 2], 0)
+    l_w_num = 0
+    m = dict.fromkeys([0, 1, 2], 0)
+    m_w_num = 0
+    h = dict.fromkeys([0, 1, 2], 0)
+    h_w_num = 0
+    for _, v in user_weibo_num.items():
+        if v[0] <= 5:
+            l_w_num += v[0]
+            l[0] += v[1]
+            l[1] += v[2]
+            l[2] += v[3]
+        elif v[0] > 40:
+            h_w_num += v[0]
+            h[0] += v[1]
+            h[1] += v[2]
+            h[2] += v[3]
+        else:
+            m_w_num += v[0]
+            m[0] += v[1]
+            m[1] += v[2]
+            m[2] += v[3]
+    print l_w_num, m_w_num, h_w_num
+    print l
+    print m
+    print h
+    f.close()
+    # save_user_weibo(user_weibo_num)
+
+
+def save_user_weibo(user_weibo_num):
+    f_read = open('./weibo_emotion/w1_u.txt', 'r')
+    f_save_l = open('./weibo_emotion/l_weibo.txt', 'w')
+    f_save_m = open('./weibo_emotion/m_weibo.txt', 'w')
+    f_save_h = open('./weibo_emotion/h_weibo.txt', 'w')
+    num = 0
+    for line in f_read.readlines():
+        weibo = line.strip().decode('utf-8').split()[1:]
+        weibo = ' '.join(weibo)
+        count = user_weibo_num[num][0]
+        if count <= 5:
+            f_save_l.write('%s\n' % weibo.encode('utf-8'))
+        elif count > 40:
+            f_save_h.write('%s\n' % weibo.encode('utf-8'))
+        else:
+            f_save_m.write('%s\n' % weibo.encode('utf-8'))
+        num += 1
+    f_read.close()
+    f_save_l.close()
+    f_save_m.close()
+    f_save_h.close()
+
+
+def pick_test_data():
+    f_l = open('./weibo_emotion/l_weibo.txt', 'r')
+    f_m = open('./weibo_emotion/m_weibo.txt', 'r')
+    f_h = open('./weibo_emotion/h_weibo.txt', 'r')
+    f_t_l = open('./weibo_emotion/test_l.txt', 'w')
+    f_t_m = open('./weibo_emotion/test_m.txt', 'w')
+    f_t_h = open('./weibo_emotion/test_h.txt', 'w')
+    w_l = []
+    for line in f_l.readlines()[10000:]:
+        w_l.append(line)
+    w_l = random.sample(w_l, 1000)
+    w_m = []
+    for line in f_m.readlines()[1000:]:
+        w_m.append(line)
+    w_m = random.sample(w_m, 100)
+    w_h = []
+    for line in f_h.readlines()[150:]:
+        w_h.append(line)
+    w_h = random.sample(w_h, 15)
+
+    for l in w_l:
+        f_t_l.write('%s' % l)
+    for m in w_m:
+        f_t_m.write('%s' % m)
+    for h in w_h:
+        f_t_h.write('%s' % h)
+
+    f_l.close()
+    f_m.close()
+    f_h.close()
+    f_t_l.close()
+    f_t_m.close()
+    f_t_h.close()
+
+
 if __name__ == '__main__':
     # read_file()
     # preprocess_weibo('')
@@ -766,5 +946,8 @@ if __name__ == '__main__':
     # process_xml()
     # re_segment_words()
     # re_segment_train_test_data()
-    get_train()
+    # get_train()
+    # read_user_weibo()
+    # read_user_weibo_statistics()
+    pick_test_data()
     # tongji()

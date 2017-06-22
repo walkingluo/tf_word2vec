@@ -9,7 +9,7 @@ def read_tweet(filename):
     fp = open(filename, 'rb')
     tweets = []
     tweets_sent = []
-    for line in fp.readlines()[:1000000]:
+    for line in fp.readlines()[:100000]:
         if len(line.decode('utf-8').split()[:-1]) != 0:
             tweets.append(line.decode('utf-8').split()[:-1])
             tweets_sent.append(int(line.split()[-1]))
@@ -385,22 +385,69 @@ def main():
     # print labels.transpose()
     # return tweets, tweets_sent, dictionary, reverse_dictionary
     return vocabulary_size, weibo_id, weibo_sent, vocab_counts, reverse_dictionary, neu_words, pos_words, neg_words
+    # return vocabulary_size, weibo_id, vocab_counts, reverse_dictionary
 
 
 def save_train_data():
-    weibo, weibo_sent = read_tweet('./weibo_emotion/week1_s.txt')
+    weibo = read_tweet('./weibo_emotion/week1_train.txt')
     print len(weibo)
-    f = open('./weibo_emotion/week1_train.txt', 'w')
-    for w in weibo:
+    f = open('./weibo_emotion/week1_train_1.txt', 'w')
+    for w in weibo[:100000]:
         line = ' '.join(w)
         f.write('%s\n' % line.encode('utf-8'))
     f.close()
 
+
+def read_vec(filename):
+    f = open(filename)
+    vocabulary_size, embedding_dim = f.readline().split()
+    embeddings = []
+    words = []
+    emo = []
+    emo_embed = []
+    for line in f.readlines():
+        w = line.split()[0].decode('utf-8')
+        if w[0] == u'[':
+            emo.append(w)
+            emo_embed.append([float(num) for num in line.split()[1:]])
+        words.append(line.split()[0].decode('utf-8'))
+        embeddings.append([float(num) for num in line.split()[1:]])
+        # embeddings.append(line.split()[1:])
+    f.close()
+    return vocabulary_size, embedding_dim, embeddings, words, emo, emo_embed
+
+
+def load_user_weibo(filename):
+    f = open(filename, 'r')
+    train = []
+    label = []
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        if len(line) > 1:
+            line = ' '.join(line)
+            weibo = line.split(',')
+        for w in weibo:
+            train.append(w[:-1].split())
+            label.append(int(w[-1]))
+    return train, label
+
 if __name__ == "__main__":
     # main()
-    save_train_data()
+    # save_train_data()
     # get_batch()
     # load_data()
     # load_test_data('./NLPCC/train_data_nlpcc14_weibo.txt')
     # test, label, none_num = load_test_data('./NLPCC/1/test_data_nlpcc13_weibo_new.txt')
     # print len(test), len(label), none_num
+    '''
+    vocabulary_size, embedding_dim, embeddings, words, emo, emo_embed = read_vec('vec_1.txt')
+    print vocabulary_size
+    print embedding_dim
+    print len(words)
+    print len(emo)
+    print emo[0], emo[1], emo[2], emo[-1]
+    '''
+    train, label = load_user_weibo('./weibo_emotion/l_weibo.txt')
+    print len(train), len(label)
+    print train[:5]
+    print label[:5]
