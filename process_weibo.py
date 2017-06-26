@@ -153,29 +153,36 @@ def get_train():
                 if i <= len(seg_list)-3 and seg_list[i] == u'[' and seg_list[i+2] == u']':
                     seg_list[i+1] = u'[' + seg_list[i+1] + u']'
             seg_list = [w for w in seg_list if w not in punc and w not in punc_en]
-            line = ' '.join(seg_list)
-            pos_num = 0
-            neg_num = 0
-            emotion = re.findall("(\[.*?\])", line)
-            for e in emotion:
-                if e in emotoin_pos:
-                    pos_num += 1
-                if e in emotoin_neg:
-                    neg_num += 1
-            if pos_num > neg_num:
-                sent.append(2)
-            elif pos_num < neg_num:
-                sent.append(0)
-            else:
-                sent.append(1)
-            weibo.append(line)
-            print len(weibo)
+            if len(seg_list) >= 5:
+                line = ' '.join(seg_list)
+                '''
+                pos_num = 0
+                neg_num = 0
+                emotion = re.findall("(\[.*?\])", line)
+                for e in emotion:
+                    if e in emotoin_pos:
+                        pos_num += 1
+                    if e in emotoin_neg:
+                        neg_num += 1
+                if pos_num > neg_num:
+                    sent.append(2)
+                elif pos_num < neg_num:
+                    sent.append(0)
+                else:
+                    sent.append(1)
+                '''
+                weibo.append(line)
+                print len(weibo)
         except Exception as e:
             print e
-
+    '''
     fo = open('./weibo_emotion/week1_s.txt', 'w')
     for line, s in zip(weibo, sent):
         fo.write('%s %d\n' % (line.encode('utf-8'), s))
+    '''
+    fo = open('./weibo_emotion/week1_o.txt', 'w')
+    for line in weibo:
+        fo.write('%s\n' % line.encode('utf-8'))
 
     f.close()
     fo.close()
@@ -928,6 +935,43 @@ def pick_test_data():
     f_t_h.close()
 
 
+def process_character_level():
+    f = open('./weibo_emotion/week1_o.txt', 'r')
+    f_s = open('./weibo_emotion/week1_c.txt', 'w')
+    num = 0
+    for line in f.readlines():
+        line = line.strip().decode('utf-8').split()
+        if len(line) >= 5:
+            charac_word = []
+            for word in line:
+                if word[0] == u'<' or word[0] == u'[':
+                    charac_word.append(word)
+                else:
+                    for w in word:
+                        charac_word.append(w)
+            f_s.write('%s\n' % ' '.join(charac_word).encode('utf-8'))
+            num += 1
+            print num
+    f.close()
+    f_s.close()
+
+
+def look_data():
+    f1 = open('./weibo_emotion/week1_o.txt', 'r')
+    f2 = open('./weibo_emotion/week1_character.txt', 'r')
+
+    w = []
+    w_c = []
+    for line in f1.readlines():
+        line = line.strip().decode('utf-8')
+        w.append(line)
+    print len(w)
+    for line in f2.readlines():
+        line = line.strip().decode('utf-8')
+        w_c.append(line)
+    print len(w_c)
+
+
 if __name__ == '__main__':
     # read_file()
     # preprocess_weibo('')
@@ -949,5 +993,7 @@ if __name__ == '__main__':
     # get_train()
     # read_user_weibo()
     # read_user_weibo_statistics()
-    pick_test_data()
+    # pick_test_data()
+    process_character_level()
+    # look_data()
     # tongji()

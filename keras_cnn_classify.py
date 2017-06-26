@@ -160,6 +160,8 @@ test_label = label[num:]
 '''
 train, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13.txt')
 test, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13.txt')
+train_c, train_label = subjective_classify('./NLPCC/1/train_data_nlpcc13_charac.txt')
+test_c, test_label = subjective_classify('./NLPCC/1/test_data_nlpcc13_charac.txt')
 # train, train_label = load_train_data('./NLPCC/1/train_data_nlpcc13.txt')
 # test, test_label = load_test_data('./NLPCC/1/test_data_nlpcc13.txt')
 # train, train_label = load_pos_neg_data('./NLPCC/train_data_nlpcc13_weibo.txt')
@@ -179,22 +181,29 @@ def read_vec(filename):
     emo = []
     emo_embed = []
     for line in f.readlines():
+        '''
         w = line.split()[0].decode('utf-8')
         if w[0] == u'[':
             emo.append(w)
             emo_embed.append([float(num) for num in line.split()[1:]])
+        '''
         words.append(line.split()[0].decode('utf-8'))
         embeddings.append([float(num) for num in line.split()[1:]])
         # embeddings.append(line.split()[1:])
     f.close()
-    return vocabulary_size, embedding_dim, embeddings, words, emo, emo_embed
+    return vocabulary_size, embedding_dim, embeddings, words  # , emo, emo_embed
 
-vocabulary_size, embedding_dim, embeddings, words, emo, emo_embed = read_vec('vec.txt')
+vocabulary_size, embedding_dim, embeddings, words = read_vec('vec.txt')
+vocabulary_size_c, embedding_dim_c, embeddings_c, words_c = read_vec('vec_c.txt')
 vocabulary_size = int(vocabulary_size)
 embedding_dim = int(embedding_dim)
 embeddings = np.array(embeddings)
 embeddings = np.round(embeddings, 6)
-emo_embed = np.array(emo_embed)
+vocabulary_size_c = int(vocabulary_size_c)
+embedding_dim_c = int(embedding_dim_c)
+embeddings_c = np.array(embeddings_c)
+embeddings_c = np.round(embeddings_c, 6)
+# emo_embed = np.array(emo_embed)
 print len(words)
 
 
@@ -218,8 +227,11 @@ def word_to_id(tweets, dictionary):
     return tweets_to_id
 
 dictionary = build_dict(words)
+dictionary_c = build_dict(words_c)
 train_id = word_to_id(train, dictionary)
 test_id = word_to_id(test, dictionary)
+train_id_c = word_to_id(train_c, dictionary_c)
+test_id_c = word_to_id(test_c, dictionary_c)
 # print len(train_id)
 
 '''
@@ -237,16 +249,17 @@ print count
 emo_list_train = []
 emo_list_test = []
 for i in range(len(train_id)):
-    emo_list_train.append(np.arange(100))
+    emo_list_train.append(np.arange(50))
 
 for i in range(len(test_id)):
-    emo_list_test.append(np.arange(100))
+    emo_list_test.append(np.arange(50))
 
 emo_list_train = np.array(emo_list_train)
 emo_list_test = np.array(emo_list_test)
 '''
 train_num = int(len(train_id) * 0.95)
 max_weibo_length = 100
+max_weibo_length_c = 200
 '''
 emo_train = emo_list_train[:train_num]
 emo_valid = emo_list_train[train_num:]
@@ -271,6 +284,24 @@ X_test = sequence.pad_sequences(X_test,
                                 maxlen=max_weibo_length,
                                 padding='post',
                                 truncating='post')
+
+X_train_c = train_id_c[:train_num]
+X_train_c = sequence.pad_sequences(X_train_c,
+                                   maxlen=max_weibo_length_c,
+                                   padding='post',
+                                   truncating='post')
+
+X_valid_c = train_id_c[train_num:]
+X_valid_c = sequence.pad_sequences(X_valid_c,
+                                   maxlen=max_weibo_length_c,
+                                   padding='post',
+                                   truncating='post')
+
+X_test_c = test_id_c[:]
+X_test_c = sequence.pad_sequences(X_test_c,
+                                  maxlen=max_weibo_length_c,
+                                  padding='post',
+                                  truncating='post')
 # print len(X_train)
 # print len(X_test)
 
@@ -292,6 +323,11 @@ embedding_layer_non_static = Embedding(vocabulary_size,
                                        weights=[embeddings],
                                        trainable=True,
                                        input_length=max_weibo_length)
+embedding_layer_non_static_c = Embedding(vocabulary_size_c,
+                                         embedding_dim_c,
+                                         weights=[embeddings_c],
+                                         trainable=True,
+                                         input_length=max_weibo_length_c)
 embedding_layer_rand = Embedding(vocabulary_size,
                                  embedding_dim,
                                  input_length=max_weibo_length)
@@ -301,13 +337,15 @@ emo_embed_layer = Embedding(len(emo), 100, weights=[emo_embed], trainable=True)
 m_emo = Sequential()
 m_emo.add(emo_embed_layer)
 print m_emo.output_shape
+
 m_embed = Sequential()
 m_embed.add(embedding_layer_non_static)
 print m_embed.output_shape
+
 emo_merge = Merge([m_emo, m_embed], mode='dot')
 print emo_merge.output_shape
 '''
-drop_rate = 0.3
+drop_rate = 0.25
 
 model_1 = Sequential()
 model_1.add(embedding_layer_non_static)
@@ -316,7 +354,7 @@ model_1.add(Conv1D(100, 3, activation='relu', padding='same'))
 model_1.add(GlobalMaxPooling1D())
 
 model_1_s = Sequential()
-model_1_s.add(embedding_layer_static)
+model_1_s.add(embedding_layer_non_static_c)
 model_1_s.add(SpatialDropout1D(drop_rate))
 model_1_s.add(Conv1D(100, 3, activation='relu', padding='same'))
 model_1_s.add(GlobalMaxPooling1D())
@@ -328,7 +366,7 @@ model_2.add(Conv1D(100, 4, activation='relu', padding='same'))
 model_2.add(GlobalMaxPooling1D())
 
 model_2_s = Sequential()
-model_2_s.add(embedding_layer_static)
+model_2_s.add(embedding_layer_non_static_c)
 model_2_s.add(SpatialDropout1D(drop_rate))
 model_2_s.add(Conv1D(100, 4, activation='relu', padding='same'))
 model_2_s.add(GlobalMaxPooling1D())
@@ -340,7 +378,7 @@ model_3.add(Conv1D(100, 5, activation='relu', padding='same'))
 model_3.add(GlobalMaxPooling1D())
 
 model_3_s = Sequential()
-model_3_s.add(embedding_layer_static)
+model_3_s.add(embedding_layer_non_static_c)
 model_3_s.add(SpatialDropout1D(drop_rate))
 model_3_s.add(Conv1D(100, 5, activation='relu', padding='same'))
 model_3_s.add(GlobalMaxPooling1D())
@@ -361,22 +399,21 @@ model.compile(loss='categorical_crossentropy', optimizer='adam',
 history = LossHistory()
 ma_f_max = 0
 '''
-model.fit([emo_train, X_train], y_train, validation_data=([emo_valid, X_valid], y_vaild), epochs=3,
+model.fit([emo_train, X_train], y_train, validation_data=([emo_valid, X_valid], y_vaild), epochs=4,
           batch_size=60, callbacks=[history])
 
-model.fit([X_train], y_train, validation_data=([X_valid], y_vaild), epochs=4,
+model.fit([X_train], y_train, validation_data=([X_valid], y_vaild), epochs=5,
           batch_size=60, callbacks=[history])
 '''
-
-model.fit([X_train, X_train], y_train, validation_data=([X_valid, X_valid], y_vaild), epochs=3,
-          batch_size=60, callbacks=[history])
+model.fit([X_train, X_train_c], y_train, validation_data=([X_valid, X_valid_c], y_vaild), epochs=4,
+          batch_size=36, callbacks=[history])
 
 # del model
 # model = load_model('my_model_13.h5')
-score = model.evaluate([X_test, X_test], y_test)
+# score = model.evaluate([X_test, X_test], y_test)
 # y_p = model.predict_classes([X_test])
 # y_p = model.predict_classes([emo_list_test, X_test])
-y_p = model.predict_classes([X_test, X_test])
+y_p = model.predict_classes([X_test, X_test_c])
 test_label = np.array(test_label)
 
 
@@ -441,12 +478,12 @@ def evaluate_result(y_p, test_label):
     print 'Micro precision: ', micro_precision
     print 'Micro recall: ', micro_recall
     print 'Micro F1: ', micro_f1
-
+    '''
     print model.metrics_names
     print score
     print "Test loss: ", score[0]
     print "Test accuracy: ", score[1]
-
+    '''
     sys_cor = dict()
     for i in range(2):
         sys_cor[i] = 0
